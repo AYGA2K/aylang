@@ -4,8 +4,9 @@
 enum class TokenType {
   Unknown,
   EndOfFile,
+
   Identifier,
-  Integer,
+  Number,
   Plus,
   Minus,
   Star,
@@ -31,6 +32,7 @@ enum class TokenType {
   If,
   Else,
   While,
+  Var,
 
   // Operators
   Function,
@@ -39,5 +41,5 @@ enum class TokenType {
 
 struct Token {
   TokenType type;
-  std::string Literal;
+  std::string literal;
 };
