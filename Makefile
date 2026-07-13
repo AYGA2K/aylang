@@ -18,7 +18,7 @@ run: build
 	$(BUILD_DIR)/$(TARGET)
 
 test: build
-	$(BUILD_DIR)/$(TARGET) $(EXAMPLE)
+	ctest --test-dir $(BUILD_DIR) --output-on-failure
 
 clean:
 	rm -rf $(BUILD_DIR)
