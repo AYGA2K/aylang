@@ -3,6 +3,7 @@
 #include <cctype>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 TokenType lookupIdentifier(const std::string &literal) {
   static const std::unordered_map<std::string, TokenType> keywords = {
@@ -37,6 +38,15 @@ char Lexer::peekNext() {
     return '\0';
   }
   return input[current + 1];
+}
+
+std::vector<Token> Lexer::tokenize() {
+  std::vector<Token> tokens;
+  while (current < input.size()) {
+    Token token = nextToken();
+    tokens.push_back(token);
+  }
+  return tokens;
 }
 
 Token Lexer::nextToken() {

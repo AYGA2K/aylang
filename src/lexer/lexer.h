@@ -2,6 +2,7 @@
 
 #include "token.h"
 #include <string>
+#include <vector>
 
 struct Lexer {
   std::string input;
@@ -12,6 +13,8 @@ struct Lexer {
   char peekChar();
   char peekNext();
   Token nextToken();
+
+  std::vector<Token> tokenize();
 };
 
 // Returns the keyword TokenType for `literal`, or Identifier if it is not a

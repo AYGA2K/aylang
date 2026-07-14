@@ -16,15 +16,7 @@ struct Expected {
 void expectTokens(const std::string &input,
                   const std::vector<Expected> &expected) {
   Lexer lexer{.input = input};
-  std::vector<Token> got;
-  for (;;) {
-    Token tok = lexer.nextToken();
-    if (tok.type == TokenType::EndOfFile) {
-      break;
-    }
-    got.push_back(tok);
-  }
-
+  std::vector<Token> got = lexer.tokenize();
   ASSERT_EQ(got.size(), expected.size());
   for (std::size_t i = 0; i < expected.size(); i++) {
     EXPECT_EQ(static_cast<int>(got[i].type), static_cast<int>(expected[i].type))
