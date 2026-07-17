@@ -47,7 +47,7 @@ TEST(Lexer, TwoCharAndComparisonOperators) {
                {
                    {TokenType::Assign, "="},
                    {TokenType::Equal, "=="},
-                   {TokenType::Not, "!"},
+                   {TokenType::BANG, "!"},
                    {TokenType::NotEqual, "!="},
                    {TokenType::LessThan, "<"},
                    {TokenType::LessThanOrEqual, "<="},
