@@ -1,0 +1,67 @@
+#include "lexer/token.h"
+
+std::string tokenTypeToString(TokenType type) {
+  switch (type) {
+  case TokenType::Unknown:
+    return "Unknown";
+  case TokenType::EndOfFile:
+    return "EndOfFile";
+  case TokenType::Identifier:
+    return "Identifier";
+  case TokenType::Number:
+    return "Number";
+  case TokenType::Plus:
+    return "Plus";
+  case TokenType::Minus:
+    return "Minus";
+  case TokenType::Star:
+    return "Star";
+  case TokenType::Slash:
+    return "Slash";
+  case TokenType::LParen:
+    return "LParen";
+  case TokenType::RParen:
+    return "RParen";
+  case TokenType::LBrace:
+    return "LBrace";
+  case TokenType::RBrace:
+    return "RBrace";
+  case TokenType::Comma:
+    return "Comma";
+  case TokenType::Semicolon:
+    return "Semicolon";
+  case TokenType::Equal:
+    return "Equal";
+  case TokenType::NotEqual:
+    return "NotEqual";
+  case TokenType::LessThan:
+    return "LessThan";
+  case TokenType::GreaterThan:
+    return "GreaterThan";
+  case TokenType::LessThanOrEqual:
+    return "LessThanOrEqual";
+  case TokenType::GreaterThanOrEqual:
+    return "GreaterThanOrEqual";
+  case TokenType::And:
+    return "And";
+  case TokenType::Or:
+    return "Or";
+  case TokenType::BANG:
+    return "Not";
+  case TokenType::Assign:
+    return "Assign";
+  case TokenType::If:
+    return "If";
+  case TokenType::Else:
+    return "Else";
+  case TokenType::While:
+    return "While";
+  case TokenType::Var:
+    return "Var";
+  case TokenType::Function:
+    return "Function";
+  case TokenType::Return:
+    return "Return";
+  }
+  return "Unknown";
+}

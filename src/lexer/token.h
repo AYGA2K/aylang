@@ -25,7 +25,7 @@ enum class TokenType {
   GreaterThanOrEqual,
   And,
   Or,
-  Not,
+  BANG,
   Assign,
 
   // Keywords
@@ -43,3 +43,5 @@ struct Token {
   TokenType type;
   std::string literal;
 };
+
+std::string tokenTypeToString(TokenType type);

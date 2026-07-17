@@ -101,7 +101,7 @@ Token Lexer::nextToken() {
       current++;
       return Token{.type = TokenType::NotEqual, .literal = "!="};
     }
-    return Token{.type = TokenType::Not, .literal = "!"};
+    return Token{.type = TokenType::BANG, .literal = "!"};
   case '&':
     if (peekChar() == '&') {
       current++;
