@@ -7,8 +7,6 @@ enum class ExpressionKind {
   LITERAL_NUMBER,
   LITERAL_STRING,
   LITERAL_BOOL,
-  PREFIX,
-  INFIX,
   BINARY,
   UNARY,
   STAR,

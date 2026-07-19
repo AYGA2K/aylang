@@ -6,5 +6,5 @@
 
 using ExprPtr = std::unique_ptr<Expression>;
 
-using PrefixParseFn = std::function<ExprPtr()>;
-using InfixParseFn = std::function<ExprPtr(ExprPtr)>;
+using UnaryParseFn = std::function<ExprPtr()>;
+using BinaryParseFn = std::function<ExprPtr(ExprPtr)>;

@@ -6,6 +6,17 @@
 #include <string>
 #include <vector>
 
+std::unordered_map<TokenType, Precedence> precedences{
+    {TokenType::Equal, Precedence::EQUALS},
+    {TokenType::NotEqual, Precedence::EQUALS},
+    {TokenType::LessThan, Precedence::LESSGREATER},
+    {TokenType::GreaterThan, Precedence::LESSGREATER},
+    {TokenType::Minus, Precedence::SUM},
+    {TokenType::Plus, Precedence::SUM},
+    {TokenType::Slash, Precedence::PRODUCT},
+    {TokenType::Star, Precedence::PRODUCT},
+};
+
 bool Parser::currentTokenIs(TokenType type) {
   return currentToken().type == type;
 }
@@ -28,7 +39,23 @@ Token Parser::nextToken() {
   return tokens[current + 1];
 }
 
-std::vector<Statement> Parser::parse() {
+Precedence Parser::nextPrecendence() {
+  auto it = precedences.find(nextToken().type);
+  if (it == precedences.end()) {
+    return Precedence::LOWEST;
+  }
+  return it->second;
+}
+
+Precedence Parser::currentPrecendence() {
+  auto it = precedences.find(currentToken().type);
+  if (it == precedences.end()) {
+    return Precedence::LOWEST;
+  }
+  return it->second;
+}
+
+void Parser::parse() {
   while (currentToken().type != TokenType::EndOfFile) {
     switch (currentToken().type) {
     case TokenType::Var:
@@ -38,7 +65,6 @@ std::vector<Statement> Parser::parse() {
     case TokenType::Else:
     case TokenType::While:
     case TokenType::Return:
-      // Not implemented yet
       break;
     default:
       parseExpressionStatment();
@@ -46,78 +72,85 @@ std::vector<Statement> Parser::parse() {
     }
     current++;
   }
-  return parserResult.statements;
 }
 
-Statement Parser::parseExpressionStatment() {
+void Parser::parseExpressionStatment() {
   Statement statement;
   statement.kind = StatementKind::EXPRESSION;
-  statement.expression = parseExpression(Precedence::LOWEST);
+  statement.expressionIndex = parseExpression(Precedence::LOWEST);
   if (nextTokenIs(TokenType::Semicolon)) {
     current++;
   }
   parserResult.statements.push_back(statement);
-  return statement;
 }
 
 // Parses "var name;" or "var name = expression;"
-Statement Parser::parseVarStatement() {
+void Parser::parseVarStatement() {
   current++; // skip "var"
   Statement statement;
   statement.kind = StatementKind::VAR;
   if (!currentTokenIs(TokenType::Identifier)) {
     errors.push_back(
         expectedTokenError(TokenType::Identifier, currentToken().type));
-    return statement;
+    return;
   }
   statement.name = currentToken().literal;
   current++;
   // Declaration without initializer: "var name;"
   if (currentTokenIs(TokenType::Semicolon)) {
     parserResult.statements.push_back(statement);
-    return statement;
+    return;
   }
   if (!currentTokenIs(TokenType::Assign)) {
     errors.push_back(
         expectedTokenError(TokenType::Assign, currentToken().type));
-    return statement;
+    return;
   }
   current++; // skip "="
-  statement.expression = parseExpression(Precedence::LOWEST);
+  statement.expressionIndex = parseExpression(Precedence::LOWEST);
   if (nextTokenIs(TokenType::Semicolon)) {
     current++;
   }
   parserResult.statements.push_back(statement);
-  return statement;
 }
 
-Expression Parser::parseExpression(Precedence precedence) {
-  auto prefix = prefixFns[currentToken().type];
-  if (!prefix) {
-    return {};
+int Parser::parseExpression(Precedence precedence) {
+  auto unary = unaryFns[currentToken().type];
+  if (!unary) {
+    return -1;
   }
-  auto leftExpt = prefix();
-  return *leftExpt;
+  int leftExprIndex = unary();
+  while (!nextTokenIs(TokenType::Semicolon) && nextPrecendence() > precedence) {
+    auto binary = binaryFns[nextToken().type];
+    if (!binary) {
+      return leftExprIndex;
+    }
+    current++;
+    leftExprIndex = binary(leftExprIndex);
+  }
+  return leftExprIndex;
 }
 
-Expression Parser::parseIdentifier() {
+int Parser::parseIdentifier() {
   Expression expression;
   expression.kind = ExpressionKind::IDENTIFIER;
   expression.stringValue = currentToken().literal;
-  return expression;
+  parserResult.expressions.push_back(expression);
+  return parserResult.expressions.size() - 1;
 }
 
-Expression Parser::parseNumber() {
+int Parser::parseNumber() {
   Expression expression;
   expression.kind = ExpressionKind::LITERAL_NUMBER;
   expression.numValue = std::stod(currentToken().literal);
-  return expression;
+  parserResult.expressions.push_back(expression);
+  return parserResult.expressions.size() - 1;
 }
 
 // Parses "!operand" or "-operand"
-Expression Parser::parsePrefix() {
+int Parser::parseUnary() {
   Expression expression;
-  expression.kind = ExpressionKind::PREFIX;
+  expression.kind = ExpressionKind::UNARY;
   if (currentToken().type == TokenType::BANG) {
     expression.unaryOperator = UnaryOperator::NOT;
   } else if (currentToken().type == TokenType::Minus) {
@@ -125,22 +158,49 @@ Expression Parser::parsePrefix() {
   }
   current++; // skip the operator
   // Child expressions live in parserResult.expressions, referenced by index
-  Expression rightExpr = parseExpression(Precedence::PREFIX);
-  expression.operandExprIndex = parserResult.expressions.size();
-  parserResult.expressions.push_back(rightExpr);
-  return expression;
+  expression.operandExprIndex = parseExpression(Precedence::UNARY);
+  parserResult.expressions.push_back(expression);
+  return parserResult.expressions.size() - 1;
+}
+
+int Parser::parseBinary(int leftExprIndex) {
+  Expression expression;
+  expression.kind = ExpressionKind::BINARY;
+  expression.leftExprIndex = leftExprIndex;
+  TokenType type = currentToken().type;
+  if (type == TokenType::Plus) {
+    expression.binaryOperator = BinaryOperator::ADD;
+  } else if (type == TokenType::Minus) {
+    expression.binaryOperator = BinaryOperator::SUBTRACT;
+  } else if (type == TokenType::Star) {
+    expression.binaryOperator = BinaryOperator::MULTIPLY;
+  } else if (type == TokenType::Slash) {
+    expression.binaryOperator = BinaryOperator::DIVIDE;
+  } else if (type == TokenType::Equal) {
+    expression.binaryOperator = BinaryOperator::EQUAL;
+  } else if (type == TokenType::NotEqual) {
+    expression.binaryOperator = BinaryOperator::NOT_EQUAL;
+  } else if (type == TokenType::LessThan) {
+    expression.binaryOperator = BinaryOperator::LESS_THAN;
+  } else if (type == TokenType::GreaterThan) {
+    expression.binaryOperator = BinaryOperator::GREATER_THAN;
+  }
+  Precedence precendence = currentPrecendence();
+  current++;
+  expression.rightExprIndex = parseExpression(precendence);
+  parserResult.expressions.push_back(expression);
+  return parserResult.expressions.size() - 1;
 }
 
 std::string expectedTokenError(TokenType expected, TokenType got) {
   return "Expected next token to be " + tokenTypeToString(expected) + ", got " +
-
          tokenTypeToString(got);
 }
 
-void Parser::registerPrefix(TokenType prefixType, PrefixParseFn fn) {
-  prefixFns[prefixType] = fn;
+void Parser::registerUnary(TokenType unaryType, UnaryParseFn fn) {
+  unaryFns[unaryType] = fn;
 }
 
-void Parser::registerInfix(TokenType infixType, InfixParseFn fn) {
-  infixFns[infixType] = fn;
+void Parser::registerBinary(TokenType binaryType, BinaryParseFn fn) {
+  binaryFns[binaryType] = fn;
 }

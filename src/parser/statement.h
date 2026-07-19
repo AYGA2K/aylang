@@ -14,6 +14,7 @@ struct Statement {
   // Var Statement
   std::string name;
 
-  // Var initializer, return value, or expression statement expression
-  Expression expression;
+  // Index into ParserResult.expressions for the var initializer, return value,
+  // or expression statement expression (-1 means none).
+  int expressionIndex = -1;
 };
