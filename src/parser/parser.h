@@ -43,6 +43,8 @@ struct Parser {
     registerPrefix(TokenType::Number, [this] { return parseNumber(); });
     registerPrefix(TokenType::False, [this] { return parseBoolean(); });
     registerPrefix(TokenType::True, [this] { return parseBoolean(); });
+    registerPrefix(TokenType::LParen,
+                   [this] { return parseGroupedExpression(); });
 
     auto unary = [this] { return parseUnary(); };
     registerPrefix(TokenType::BANG, unary);
@@ -75,6 +77,7 @@ struct Parser {
   int parseUnary();
   int parseBinary(int leftExprIndex);
   int parseBoolean();
+  int parseGroupedExpression();
   void registerPrefix(TokenType tokenType, PrefixParseFn fn);
   void registerInfix(TokenType tokenType, InfixParseFn fn);
 };

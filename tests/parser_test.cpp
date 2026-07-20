@@ -371,4 +371,57 @@ TEST(Parser, ParseBinarySumBindsTighterThanComparison) {
   EXPECT_TRUE(parser.errors.empty());
 }
 
+TEST(Parser, ParseGroupedExpression) {
+  std::vector<Token> tokens = tokenize("(5 + 5);");
+  Parser parser{tokens};
+
+  int index = parser.parseGroupedExpression();
+  Expression expression = at(parser, index);
+
+  EXPECT_EQ(static_cast<int>(expression.kind),
+            static_cast<int>(ExpressionKind::BINARY));
+  EXPECT_EQ(static_cast<int>(expression.binaryOperator),
+            static_cast<int>(BinaryOperator::ADD));
+  EXPECT_DOUBLE_EQ(at(parser, expression.leftExprIndex).numValue, 5.0);
+  EXPECT_DOUBLE_EQ(at(parser, expression.rightExprIndex).numValue, 5.0);
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseGroupedExpressionMissingClosingParen) {
+  std::vector<Token> tokens = tokenize("(5 + 5;");
+  Parser parser{tokens};
+
+  int index = parser.parseGroupedExpression();
+
+  EXPECT_EQ(index, -1);
+}
+
+TEST(Parser, ParseGroupedExpressionOverridesPrecedence) {
+  std::vector<Token> tokens = tokenize("(1 + 2) * 3;");
+  Parser parser{tokens};
+
+  parser.parseExpressionStatment();
+
+  ASSERT_FALSE(parser.parserResult.statements.empty());
+  // Expect (1 + 2) * 3: root is MULTIPLY, left child is ADD.
+  Expression root =
+      at(parser, parser.parserResult.statements[0].expressionIndex);
+  EXPECT_EQ(static_cast<int>(root.kind),
+            static_cast<int>(ExpressionKind::BINARY));
+  EXPECT_EQ(static_cast<int>(root.binaryOperator),
+            static_cast<int>(BinaryOperator::MULTIPLY));
+
+  Expression left = at(parser, root.leftExprIndex);
+  EXPECT_EQ(static_cast<int>(left.kind),
+            static_cast<int>(ExpressionKind::BINARY));
+  EXPECT_EQ(static_cast<int>(left.binaryOperator),
+            static_cast<int>(BinaryOperator::ADD));
+  EXPECT_DOUBLE_EQ(at(parser, left.leftExprIndex).numValue, 1.0);
+  EXPECT_DOUBLE_EQ(at(parser, left.rightExprIndex).numValue, 2.0);
+
+  Expression right = at(parser, root.rightExprIndex);
+  EXPECT_DOUBLE_EQ(right.numValue, 3.0);
+  EXPECT_TRUE(parser.errors.empty());
+}
+
 } // namespace

@@ -200,6 +200,16 @@ int Parser::parseBoolean() {
   return parserResult.expressions.size() - 1;
 }
 
+int Parser::parseGroupedExpression() {
+  current++; // skip "("
+  int exprIndex = parseExpression(Precedence::LOWEST);
+  if (!nextTokenIs(TokenType::RParen)) {
+    return -1;
+  }
+  current++; // consume ")"
+  return exprIndex;
+}
+
 std::string expectedTokenError(TokenType expected, TokenType got) {
   return "Expected next token to be " + tokenTypeToString(expected) + ", got " +
          tokenTypeToString(got);
