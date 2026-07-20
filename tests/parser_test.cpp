@@ -424,4 +424,106 @@ TEST(Parser, ParseGroupedExpressionOverridesPrecedence) {
   EXPECT_TRUE(parser.errors.empty());
 }
 
+TEST(Parser, ParseIfExpression) {
+  std::vector<Token> tokens = tokenize("if (x) { y; }");
+  Parser parser{tokens};
+
+  int index = parser.parseIfExpression();
+  ASSERT_GE(index, 0);
+  Expression expression = at(parser, index);
+
+  EXPECT_EQ(static_cast<int>(expression.kind), static_cast<int>(ExpressionKind::IF));
+  ASSERT_GE(expression.conditionExprIndex, 0);
+  Expression condition = at(parser, expression.conditionExprIndex);
+  EXPECT_EQ(static_cast<int>(condition.kind),
+            static_cast<int>(ExpressionKind::IDENTIFIER));
+  EXPECT_EQ(condition.stringValue, "x");
+
+  ASSERT_GE(expression.blockStmtIndex, 0);
+  Statement block = parser.parserResult.statements[expression.blockStmtIndex];
+  EXPECT_EQ(static_cast<int>(block.kind), static_cast<int>(StatementKind::BLOCK));
+  ASSERT_EQ(block.statementsIndexes.size(), 1u);
+
+  Statement consequence =
+      parser.parserResult.statements[block.statementsIndexes[0]];
+  EXPECT_EQ(static_cast<int>(consequence.kind),
+            static_cast<int>(StatementKind::EXPRESSION));
+  Expression consequenceExpr = at(parser, consequence.expressionIndex);
+  EXPECT_EQ(static_cast<int>(consequenceExpr.kind),
+            static_cast<int>(ExpressionKind::IDENTIFIER));
+  EXPECT_EQ(consequenceExpr.stringValue, "y");
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseIfExpressionWithBinaryCondition) {
+  std::vector<Token> tokens = tokenize("if (x < y) { x; }");
+  Parser parser{tokens};
+
+  int index = parser.parseIfExpression();
+  ASSERT_GE(index, 0);
+  Expression expression = at(parser, index);
+
+  EXPECT_EQ(static_cast<int>(expression.kind), static_cast<int>(ExpressionKind::IF));
+  ASSERT_GE(expression.conditionExprIndex, 0);
+  Expression condition = at(parser, expression.conditionExprIndex);
+  EXPECT_EQ(static_cast<int>(condition.kind),
+            static_cast<int>(ExpressionKind::BINARY));
+  EXPECT_EQ(static_cast<int>(condition.binaryOperator),
+            static_cast<int>(BinaryOperator::LESS_THAN));
+  EXPECT_EQ(at(parser, condition.leftExprIndex).stringValue, "x");
+  EXPECT_EQ(at(parser, condition.rightExprIndex).stringValue, "y");
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseIfExpressionMultipleConsequenceStatements) {
+  std::vector<Token> tokens = tokenize("if (x) { y; z; }");
+  Parser parser{tokens};
+
+  int index = parser.parseIfExpression();
+  ASSERT_GE(index, 0);
+  Expression expression = at(parser, index);
+
+  ASSERT_GE(expression.blockStmtIndex, 0);
+  Statement block = parser.parserResult.statements[expression.blockStmtIndex];
+  ASSERT_EQ(block.statementsIndexes.size(), 2u);
+
+  Expression first = at(
+      parser,
+      parser.parserResult.statements[block.statementsIndexes[0]].expressionIndex);
+  Expression second = at(
+      parser,
+      parser.parserResult.statements[block.statementsIndexes[1]].expressionIndex);
+  EXPECT_EQ(first.stringValue, "y");
+  EXPECT_EQ(second.stringValue, "z");
+}
+
+TEST(Parser, ParseIfExpressionMissingOpenParen) {
+  std::vector<Token> tokens = tokenize("if x) { y; }");
+  Parser parser{tokens};
+
+  int index = parser.parseIfExpression();
+
+  EXPECT_EQ(index, -1);
+}
+
+TEST(Parser, ParseIfExpressionMissingCloseParen) {
+  std::vector<Token> tokens = tokenize("if (x { y; }");
+  Parser parser{tokens};
+
+  int index = parser.parseIfExpression();
+
+  EXPECT_EQ(index, -1);
+}
+
+TEST(Parser, ParseIfExpressionMissingBlock) {
+  std::vector<Token> tokens = tokenize("if (x)");
+  Parser parser{tokens};
+
+  int index = parser.parseIfExpression();
+  ASSERT_GE(index, 0);
+  Expression expression = at(parser, index);
+
+  EXPECT_EQ(expression.blockStmtIndex, -1);
+}
+
 } // namespace

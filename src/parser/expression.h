@@ -10,6 +10,7 @@ enum class ExpressionKind {
   BINARY,
   UNARY,
   STAR,
+  IF,
 };
 
 enum class BinaryOperator {
@@ -50,4 +51,9 @@ struct Expression {
   // Unary Expression
   UnaryOperator unaryOperator;
   int operandExprIndex = -1;
+
+  // If Expression
+  int conditionExprIndex = -1;
+  int consquenceStmtIndex = -1;
+  int blockStmtIndex = -1;
 };

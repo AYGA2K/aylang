@@ -1,11 +1,12 @@
 #pragma once
-#include "parser/expression.h"
 #include <string>
+#include <vector>
 
 enum class StatementKind {
   VAR,
   RETURN,
   EXPRESSION,
+  BLOCK,
 };
 
 struct Statement {
@@ -17,4 +18,6 @@ struct Statement {
   // Index into ParserResult.expressions for the var initializer, return value,
   // or expression statement expression (-1 means none).
   int expressionIndex = -1;
+
+  std::vector<int> statementsIndexes;
 };

@@ -69,6 +69,7 @@ struct Parser {
   Precedence currentPrecendence();
   Precedence nextPrecendence();
   void parse();
+  int parseStatement();
   void parseVarStatement();
   void parseExpressionStatment();
   int parseExpression(Precedence precedence);
@@ -78,6 +79,8 @@ struct Parser {
   int parseBinary(int leftExprIndex);
   int parseBoolean();
   int parseGroupedExpression();
+  int parseIfExpression();
+  int parseBlockStatement();
   void registerPrefix(TokenType tokenType, PrefixParseFn fn);
   void registerInfix(TokenType tokenType, InfixParseFn fn);
 };

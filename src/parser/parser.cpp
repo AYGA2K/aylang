@@ -57,21 +57,34 @@ Precedence Parser::currentPrecendence() {
 
 void Parser::parse() {
   while (currentToken().type != TokenType::EndOfFile) {
-    switch (currentToken().type) {
-    case TokenType::Var:
-      parseVarStatement();
-      break;
-    case TokenType::If:
-    case TokenType::Else:
-    case TokenType::While:
-    case TokenType::Return:
-      break;
-    default:
-      parseExpressionStatment();
-      break;
-    }
+    parseStatement();
     current++;
   }
+}
+
+// Returns the index of the parsed statement in parserResult.statements (-1
+// means none).
+int Parser::parseStatement() {
+  size_t statementsBefore = parserResult.statements.size();
+  switch (currentToken().type) {
+  case TokenType::Var:
+    parseVarStatement();
+    break;
+  case TokenType::If:
+    parseIfExpression();
+    break;
+  case TokenType::Else:
+  case TokenType::While:
+  case TokenType::Return:
+    return -1;
+  default:
+    parseExpressionStatment();
+    break;
+  }
+  if (parserResult.statements.size() == statementsBefore) {
+    return -1;
+  }
+  return parserResult.statements.size() - 1;
 }
 
 void Parser::parseExpressionStatment() {
@@ -208,6 +221,41 @@ int Parser::parseGroupedExpression() {
   }
   current++; // consume ")"
   return exprIndex;
+}
+
+int Parser::parseIfExpression() {
+  if (!nextTokenIs(TokenType::LParen)) {
+    return -1;
+  }
+  Expression expression;
+  expression.kind = ExpressionKind::IF;
+  current++;
+  int exprIndex = parseExpression(Precedence::LOWEST);
+  expression.conditionExprIndex = exprIndex;
+  if (!currentTokenIs(TokenType::RParen)) {
+    return -1;
+  }
+  expression.blockStmtIndex = parseBlockStatement();
+  parserResult.expressions.push_back(expression);
+  return parserResult.expressions.size() - 1;
+}
+
+int Parser::parseBlockStatement() {
+  if (!nextTokenIs(TokenType::LBrace)) {
+    return -1;
+  }
+  current++; // move to "{"
+  Statement statement;
+  statement.kind = StatementKind::BLOCK;
+  current++; // move past "{"
+  while (!currentTokenIs(TokenType::RBrace) &&
+         !currentTokenIs(TokenType::EndOfFile)) {
+    int index = parseStatement();
+    statement.statementsIndexes.push_back(index);
+    current++;
+  }
+  parserResult.statements.push_back(statement);
+  return parserResult.statements.size() - 1;
 }
 
 std::string expectedTokenError(TokenType expected, TokenType got) {
