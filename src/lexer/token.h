@@ -33,6 +33,8 @@ enum class TokenType {
   Else,
   While,
   Var,
+  True,
+  False,
 
   // Operators
   Function,

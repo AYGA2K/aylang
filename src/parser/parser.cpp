@@ -115,18 +115,18 @@ void Parser::parseVarStatement() {
 }
 
 int Parser::parseExpression(Precedence precedence) {
-  auto unary = unaryFns[currentToken().type];
-  if (!unary) {
+  auto prefix = prefixFns[currentToken().type];
+  if (!prefix) {
     return -1;
   }
-  int leftExprIndex = unary();
+  int leftExprIndex = prefix();
   while (!nextTokenIs(TokenType::Semicolon) && nextPrecendence() > precedence) {
-    auto binary = binaryFns[nextToken().type];
-    if (!binary) {
+    current++;
+    auto infix = infixFns[currentToken().type];
+    if (!infix) {
       return leftExprIndex;
     }
-    current++;
-    leftExprIndex = binary(leftExprIndex);
+    leftExprIndex = infix(leftExprIndex);
   }
   return leftExprIndex;
 }
@@ -192,15 +192,23 @@ int Parser::parseBinary(int leftExprIndex) {
   return parserResult.expressions.size() - 1;
 }
 
+int Parser::parseBoolean() {
+  Expression expression;
+  expression.kind = ExpressionKind::LITERAL_BOOL;
+  expression.boolValue = currentToken().type == TokenType::True ? true : false;
+  parserResult.expressions.push_back(expression);
+  return parserResult.expressions.size() - 1;
+}
+
 std::string expectedTokenError(TokenType expected, TokenType got) {
   return "Expected next token to be " + tokenTypeToString(expected) + ", got " +
          tokenTypeToString(got);
 }
 
-void Parser::registerUnary(TokenType unaryType, UnaryParseFn fn) {
-  unaryFns[unaryType] = fn;
+void Parser::registerPrefix(TokenType tokenType, PrefixParseFn fn) {
+  prefixFns[tokenType] = fn;
 }
 
-void Parser::registerBinary(TokenType binaryType, BinaryParseFn fn) {
-  binaryFns[binaryType] = fn;
+void Parser::registerInfix(TokenType tokenType, InfixParseFn fn) {
+  infixFns[tokenType] = fn;
 }

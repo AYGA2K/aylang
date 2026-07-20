@@ -10,6 +10,7 @@ TokenType lookupIdentifier(const std::string &literal) {
       {"if", TokenType::If},         {"else", TokenType::Else},
       {"while", TokenType::While},   {"fn", TokenType::Function},
       {"return", TokenType::Return}, {"var", TokenType::Var},
+      {"false", TokenType::False},   {"true", TokenType::True},
   };
 
   auto it = keywords.find(literal);

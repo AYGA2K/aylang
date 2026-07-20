@@ -62,6 +62,11 @@ std::string tokenTypeToString(TokenType type) {
     return "Function";
   case TokenType::Return:
     return "Return";
+  case TokenType::True:
+    return "True";
+  case TokenType::False:
+    return "False";
+    break;
   }
   return "Unknown";
 }

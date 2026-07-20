@@ -58,6 +58,32 @@ TEST(Parser, ParseNumberFloat) {
   EXPECT_TRUE(parser.errors.empty());
 }
 
+TEST(Parser, ParseBooleanTrue) {
+  std::vector<Token> tokens = tokenize("true;");
+  Parser parser{tokens};
+
+  int index = parser.parseBoolean();
+  Expression expression = parser.parserResult.expressions[index];
+
+  EXPECT_EQ(static_cast<int>(expression.kind),
+            static_cast<int>(ExpressionKind::LITERAL_BOOL));
+  EXPECT_TRUE(expression.boolValue);
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseBooleanFalse) {
+  std::vector<Token> tokens = tokenize("false;");
+  Parser parser{tokens};
+
+  int index = parser.parseBoolean();
+  Expression expression = parser.parserResult.expressions[index];
+
+  EXPECT_EQ(static_cast<int>(expression.kind),
+            static_cast<int>(ExpressionKind::LITERAL_BOOL));
+  EXPECT_FALSE(expression.boolValue);
+  EXPECT_TRUE(parser.errors.empty());
+}
+
 TEST(Parser, ParseUnaryBang) {
   std::vector<Token> tokens = tokenize("!5;");
   Parser parser{tokens};
@@ -179,6 +205,64 @@ TEST(Parser, NumberExpressionStatement) {
   EXPECT_EQ(static_cast<int>(expression.kind),
             static_cast<int>(ExpressionKind::LITERAL_NUMBER));
   EXPECT_DOUBLE_EQ(expression.numValue, 5.0);
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseUnaryBangBoolean) {
+  std::vector<Token> tokens = tokenize("!true;");
+  Parser parser{tokens};
+
+  int index = parser.parseUnary();
+  Expression expression = parser.parserResult.expressions[index];
+
+  EXPECT_EQ(static_cast<int>(expression.kind),
+            static_cast<int>(ExpressionKind::UNARY));
+  EXPECT_EQ(static_cast<int>(expression.unaryOperator),
+            static_cast<int>(UnaryOperator::NOT));
+  ASSERT_GE(expression.operandExprIndex, 0);
+  Expression operand =
+      parser.parserResult.expressions[expression.operandExprIndex];
+  EXPECT_EQ(static_cast<int>(operand.kind),
+            static_cast<int>(ExpressionKind::LITERAL_BOOL));
+  EXPECT_TRUE(operand.boolValue);
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, BooleanExpressionStatementTrue) {
+  std::vector<Token> tokens = tokenize("true;");
+  Parser parser{tokens};
+
+  parser.parseExpressionStatment();
+
+  ASSERT_FALSE(parser.parserResult.statements.empty());
+  Statement statement = parser.parserResult.statements[0];
+  EXPECT_EQ(static_cast<int>(statement.kind),
+            static_cast<int>(StatementKind::EXPRESSION));
+  ASSERT_GE(statement.expressionIndex, 0);
+  Expression expression =
+      parser.parserResult.expressions[statement.expressionIndex];
+  EXPECT_EQ(static_cast<int>(expression.kind),
+            static_cast<int>(ExpressionKind::LITERAL_BOOL));
+  EXPECT_TRUE(expression.boolValue);
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, BooleanExpressionStatementFalse) {
+  std::vector<Token> tokens = tokenize("false;");
+  Parser parser{tokens};
+
+  parser.parseExpressionStatment();
+
+  ASSERT_FALSE(parser.parserResult.statements.empty());
+  Statement statement = parser.parserResult.statements[0];
+  EXPECT_EQ(static_cast<int>(statement.kind),
+            static_cast<int>(StatementKind::EXPRESSION));
+  ASSERT_GE(statement.expressionIndex, 0);
+  Expression expression =
+      parser.parserResult.expressions[statement.expressionIndex];
+  EXPECT_EQ(static_cast<int>(expression.kind),
+            static_cast<int>(ExpressionKind::LITERAL_BOOL));
+  EXPECT_FALSE(expression.boolValue);
   EXPECT_TRUE(parser.errors.empty());
 }
 
