@@ -432,16 +432,19 @@ TEST(Parser, ParseIfExpression) {
   ASSERT_GE(index, 0);
   Expression expression = at(parser, index);
 
-  EXPECT_EQ(static_cast<int>(expression.kind), static_cast<int>(ExpressionKind::IF));
+  EXPECT_EQ(static_cast<int>(expression.kind),
+            static_cast<int>(ExpressionKind::IF));
   ASSERT_GE(expression.conditionExprIndex, 0);
   Expression condition = at(parser, expression.conditionExprIndex);
   EXPECT_EQ(static_cast<int>(condition.kind),
             static_cast<int>(ExpressionKind::IDENTIFIER));
   EXPECT_EQ(condition.stringValue, "x");
 
-  ASSERT_GE(expression.blockStmtIndex, 0);
-  Statement block = parser.parserResult.statements[expression.blockStmtIndex];
-  EXPECT_EQ(static_cast<int>(block.kind), static_cast<int>(StatementKind::BLOCK));
+  ASSERT_GE(expression.consquenceStmtIndex, 0);
+  Statement block =
+      parser.parserResult.statements[expression.consquenceStmtIndex];
+  EXPECT_EQ(static_cast<int>(block.kind),
+            static_cast<int>(StatementKind::BLOCK));
   ASSERT_EQ(block.statementsIndexes.size(), 1u);
 
   Statement consequence =
@@ -463,7 +466,8 @@ TEST(Parser, ParseIfExpressionWithBinaryCondition) {
   ASSERT_GE(index, 0);
   Expression expression = at(parser, index);
 
-  EXPECT_EQ(static_cast<int>(expression.kind), static_cast<int>(ExpressionKind::IF));
+  EXPECT_EQ(static_cast<int>(expression.kind),
+            static_cast<int>(ExpressionKind::IF));
   ASSERT_GE(expression.conditionExprIndex, 0);
   Expression condition = at(parser, expression.conditionExprIndex);
   EXPECT_EQ(static_cast<int>(condition.kind),
@@ -483,18 +487,79 @@ TEST(Parser, ParseIfExpressionMultipleConsequenceStatements) {
   ASSERT_GE(index, 0);
   Expression expression = at(parser, index);
 
-  ASSERT_GE(expression.blockStmtIndex, 0);
-  Statement block = parser.parserResult.statements[expression.blockStmtIndex];
+  ASSERT_GE(expression.consquenceStmtIndex, 0);
+  Statement block =
+      parser.parserResult.statements[expression.consquenceStmtIndex];
   ASSERT_EQ(block.statementsIndexes.size(), 2u);
 
-  Expression first = at(
-      parser,
-      parser.parserResult.statements[block.statementsIndexes[0]].expressionIndex);
-  Expression second = at(
-      parser,
-      parser.parserResult.statements[block.statementsIndexes[1]].expressionIndex);
+  Expression first =
+      at(parser, parser.parserResult.statements[block.statementsIndexes[0]]
+                     .expressionIndex);
+  Expression second =
+      at(parser, parser.parserResult.statements[block.statementsIndexes[1]]
+                     .expressionIndex);
   EXPECT_EQ(first.stringValue, "y");
   EXPECT_EQ(second.stringValue, "z");
+}
+
+TEST(Parser, ParseIfElseExpression) {
+  std::vector<Token> tokens = tokenize("if (x) { y; } else { z; }");
+  Parser parser{tokens};
+
+  int index = parser.parseIfExpression();
+  ASSERT_GE(index, 0);
+  Expression expression = at(parser, index);
+
+  EXPECT_EQ(static_cast<int>(expression.kind),
+            static_cast<int>(ExpressionKind::IF));
+
+  ASSERT_GE(expression.consquenceStmtIndex, 0);
+  Statement consequenceBlock =
+      parser.parserResult.statements[expression.consquenceStmtIndex];
+  ASSERT_EQ(consequenceBlock.statementsIndexes.size(), 1u);
+  Expression consequenceExpr =
+      at(parser, parser.parserResult
+                     .statements[consequenceBlock.statementsIndexes[0]]
+                     .expressionIndex);
+  EXPECT_EQ(consequenceExpr.stringValue, "y");
+
+  ASSERT_GE(expression.alternativeStmtIndex, 0);
+  Statement alternativeBlock =
+      parser.parserResult.statements[expression.alternativeStmtIndex];
+  EXPECT_EQ(static_cast<int>(alternativeBlock.kind),
+            static_cast<int>(StatementKind::BLOCK));
+  ASSERT_EQ(alternativeBlock.statementsIndexes.size(), 1u);
+  Expression alternativeExpr =
+      at(parser, parser.parserResult
+                     .statements[alternativeBlock.statementsIndexes[0]]
+                     .expressionIndex);
+  EXPECT_EQ(alternativeExpr.stringValue, "z");
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseIfElseExpressionMultipleAlternativeStatements) {
+  std::vector<Token> tokens = tokenize("if (x) { y; } else { a; b; }");
+  Parser parser{tokens};
+
+  int index = parser.parseIfExpression();
+  ASSERT_GE(index, 0);
+  Expression expression = at(parser, index);
+
+  ASSERT_GE(expression.alternativeStmtIndex, 0);
+  Statement alternativeBlock =
+      parser.parserResult.statements[expression.alternativeStmtIndex];
+  ASSERT_EQ(alternativeBlock.statementsIndexes.size(), 2u);
+
+  Expression first =
+      at(parser, parser.parserResult
+                     .statements[alternativeBlock.statementsIndexes[0]]
+                     .expressionIndex);
+  Expression second =
+      at(parser, parser.parserResult
+                     .statements[alternativeBlock.statementsIndexes[1]]
+                     .expressionIndex);
+  EXPECT_EQ(first.stringValue, "a");
+  EXPECT_EQ(second.stringValue, "b");
 }
 
 TEST(Parser, ParseIfExpressionMissingOpenParen) {
@@ -523,7 +588,7 @@ TEST(Parser, ParseIfExpressionMissingBlock) {
   ASSERT_GE(index, 0);
   Expression expression = at(parser, index);
 
-  EXPECT_EQ(expression.blockStmtIndex, -1);
+  EXPECT_EQ(expression.consquenceStmtIndex, -1);
 }
 
 } // namespace

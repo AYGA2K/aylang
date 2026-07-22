@@ -76,12 +76,16 @@ int Parser::parseStatement() {
   case TokenType::Else:
   case TokenType::While:
   case TokenType::Return:
+    errors.push_back("Unexpected token " +
+                      tokenTypeToString(currentToken().type));
     return -1;
   default:
     parseExpressionStatment();
     break;
   }
   if (parserResult.statements.size() == statementsBefore) {
+    errors.push_back("No statement produced for " +
+                      tokenTypeToString(currentToken().type));
     return -1;
   }
   return parserResult.statements.size() - 1;
@@ -130,6 +134,8 @@ void Parser::parseVarStatement() {
 int Parser::parseExpression(Precedence precedence) {
   auto prefix = prefixFns[currentToken().type];
   if (!prefix) {
+    errors.push_back("No prefix parse function for " +
+                      tokenTypeToString(currentToken().type) + " found");
     return -1;
   }
   int leftExprIndex = prefix();
@@ -217,6 +223,7 @@ int Parser::parseGroupedExpression() {
   current++; // skip "("
   int exprIndex = parseExpression(Precedence::LOWEST);
   if (!nextTokenIs(TokenType::RParen)) {
+    errors.push_back(expectedTokenError(TokenType::RParen, nextToken().type));
     return -1;
   }
   current++; // consume ")"
@@ -225,23 +232,29 @@ int Parser::parseGroupedExpression() {
 
 int Parser::parseIfExpression() {
   if (!nextTokenIs(TokenType::LParen)) {
+    errors.push_back(expectedTokenError(TokenType::LParen, nextToken().type));
     return -1;
   }
   Expression expression;
   expression.kind = ExpressionKind::IF;
   current++;
-  int exprIndex = parseExpression(Precedence::LOWEST);
-  expression.conditionExprIndex = exprIndex;
+  expression.conditionExprIndex = parseExpression(Precedence::LOWEST);
   if (!currentTokenIs(TokenType::RParen)) {
+    errors.push_back(
+        expectedTokenError(TokenType::RParen, currentToken().type));
     return -1;
   }
-  expression.blockStmtIndex = parseBlockStatement();
+  expression.consquenceStmtIndex = parseBlockStatement();
+  if (currentTokenIs(TokenType::Else)) {
+    expression.alternativeStmtIndex = parseBlockStatement();
+  }
   parserResult.expressions.push_back(expression);
   return parserResult.expressions.size() - 1;
 }
 
 int Parser::parseBlockStatement() {
   if (!nextTokenIs(TokenType::LBrace)) {
+    errors.push_back(expectedTokenError(TokenType::LBrace, nextToken().type));
     return -1;
   }
   current++; // move to "{"
@@ -254,6 +267,11 @@ int Parser::parseBlockStatement() {
     statement.statementsIndexes.push_back(index);
     current++;
   }
+  if (!currentTokenIs(TokenType::RBrace)) {
+    errors.push_back(
+        expectedTokenError(TokenType::RBrace, currentToken().type));
+  }
+  current++; // move past "}"
   parserResult.statements.push_back(statement);
   return parserResult.statements.size() - 1;
 }

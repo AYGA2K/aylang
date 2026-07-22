@@ -55,5 +55,5 @@ struct Expression {
   // If Expression
   int conditionExprIndex = -1;
   int consquenceStmtIndex = -1;
-  int blockStmtIndex = -1;
+  int alternativeStmtIndex = -1;
 };
