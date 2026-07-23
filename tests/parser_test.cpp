@@ -591,4 +591,100 @@ TEST(Parser, ParseIfExpressionMissingBlock) {
   EXPECT_EQ(expression.consquenceStmtIndex, -1);
 }
 
+TEST(Parser, ParseFunctionExpressionNoParams) {
+  std::vector<Token> tokens = tokenize("fn() { x; }");
+  Parser parser{tokens};
+
+  int index = parser.parseFunction();
+  ASSERT_GE(index, 0);
+  Expression expression = at(parser, index);
+
+  EXPECT_EQ(static_cast<int>(expression.kind),
+            static_cast<int>(ExpressionKind::FUNCTION));
+  EXPECT_TRUE(expression.parameters.empty());
+
+  ASSERT_GE(expression.bodyStmtIndex, 0);
+  Statement block = parser.parserResult.statements[expression.bodyStmtIndex];
+  EXPECT_EQ(static_cast<int>(block.kind),
+            static_cast<int>(StatementKind::BLOCK));
+  ASSERT_EQ(block.statementsIndexes.size(), 1u);
+  Expression bodyExpr =
+      at(parser,
+         parser.parserResult.statements[block.statementsIndexes[0]]
+             .expressionIndex);
+  EXPECT_EQ(bodyExpr.stringValue, "x");
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseFunctionExpressionSingleParam) {
+  std::vector<Token> tokens = tokenize("fn(x) { x; }");
+  Parser parser{tokens};
+
+  int index = parser.parseFunction();
+  ASSERT_GE(index, 0);
+  Expression expression = at(parser, index);
+
+  EXPECT_EQ(static_cast<int>(expression.kind),
+            static_cast<int>(ExpressionKind::FUNCTION));
+  ASSERT_EQ(expression.parameters.size(), 1u);
+  EXPECT_EQ(expression.parameters[0], "x");
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseFunctionExpressionMultipleParams) {
+  std::vector<Token> tokens = tokenize("fn(x, y, z) { x; }");
+  Parser parser{tokens};
+
+  int index = parser.parseFunction();
+  ASSERT_GE(index, 0);
+  Expression expression = at(parser, index);
+
+  ASSERT_EQ(expression.parameters.size(), 3u);
+  EXPECT_EQ(expression.parameters[0], "x");
+  EXPECT_EQ(expression.parameters[1], "y");
+  EXPECT_EQ(expression.parameters[2], "z");
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseFunctionExpressionMultipleBodyStatements) {
+  std::vector<Token> tokens = tokenize("fn(x) { x; y; }");
+  Parser parser{tokens};
+
+  int index = parser.parseFunction();
+  ASSERT_GE(index, 0);
+  Expression expression = at(parser, index);
+
+  ASSERT_GE(expression.bodyStmtIndex, 0);
+  Statement block = parser.parserResult.statements[expression.bodyStmtIndex];
+  ASSERT_EQ(block.statementsIndexes.size(), 2u);
+
+  Expression first =
+      at(parser, parser.parserResult.statements[block.statementsIndexes[0]]
+                     .expressionIndex);
+  Expression second =
+      at(parser, parser.parserResult.statements[block.statementsIndexes[1]]
+                     .expressionIndex);
+  EXPECT_EQ(first.stringValue, "x");
+  EXPECT_EQ(second.stringValue, "y");
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseFunctionExpressionMissingOpenParen) {
+  std::vector<Token> tokens = tokenize("fn x) { y; }");
+  Parser parser{tokens};
+
+  int index = parser.parseFunction();
+
+  EXPECT_EQ(index, -1);
+}
+
+TEST(Parser, ParseFunctionExpressionMissingCloseParen) {
+  std::vector<Token> tokens = tokenize("fn(x { y; }");
+  Parser parser{tokens};
+
+  parser.parseFunction();
+
+  EXPECT_FALSE(parser.errors.empty());
+}
+
 } // namespace
