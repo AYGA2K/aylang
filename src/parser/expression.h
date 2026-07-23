@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 enum class ExpressionKind {
   IDENTIFIER,
@@ -11,6 +12,7 @@ enum class ExpressionKind {
   UNARY,
   STAR,
   IF,
+  FUNCTION
 };
 
 enum class BinaryOperator {
@@ -56,4 +58,8 @@ struct Expression {
   int conditionExprIndex = -1;
   int consquenceStmtIndex = -1;
   int alternativeStmtIndex = -1;
+
+  // Functions
+  std::vector<std::string> parameters;
+  int bodyStmtIndex;
 };

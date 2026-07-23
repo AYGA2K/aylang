@@ -46,6 +46,8 @@ struct Parser {
     registerPrefix(TokenType::LParen,
                    [this] { return parseGroupedExpression(); });
 
+    registerPrefix(TokenType::Function, [this] { return parseFunction(); });
+
     auto unary = [this] { return parseUnary(); };
     registerPrefix(TokenType::BANG, unary);
     registerPrefix(TokenType::Minus, unary);
@@ -81,6 +83,8 @@ struct Parser {
   int parseGroupedExpression();
   int parseIfExpression();
   int parseBlockStatement();
+  int parseFunction();
+  std::vector<std::string> parseFunctionParams();
   void registerPrefix(TokenType tokenType, PrefixParseFn fn);
   void registerInfix(TokenType tokenType, InfixParseFn fn);
 };

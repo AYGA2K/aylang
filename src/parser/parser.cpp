@@ -1,4 +1,3 @@
-
 #include "parser/parser.h"
 #include "lexer/token.h"
 #include "parser/expression.h"
@@ -75,17 +74,18 @@ int Parser::parseStatement() {
     break;
   case TokenType::Else:
   case TokenType::While:
-  case TokenType::Return:
     errors.push_back("Unexpected token " +
-                      tokenTypeToString(currentToken().type));
+                     tokenTypeToString(currentToken().type));
     return -1;
+  case TokenType::Return:
+    // parseReturnStatment();
   default:
     parseExpressionStatment();
     break;
   }
   if (parserResult.statements.size() == statementsBefore) {
     errors.push_back("No statement produced for " +
-                      tokenTypeToString(currentToken().type));
+                     tokenTypeToString(currentToken().type));
     return -1;
   }
   return parserResult.statements.size() - 1;
@@ -135,7 +135,7 @@ int Parser::parseExpression(Precedence precedence) {
   auto prefix = prefixFns[currentToken().type];
   if (!prefix) {
     errors.push_back("No prefix parse function for " +
-                      tokenTypeToString(currentToken().type) + " found");
+                     tokenTypeToString(currentToken().type) + " found");
     return -1;
   }
   int leftExprIndex = prefix();
@@ -274,6 +274,56 @@ int Parser::parseBlockStatement() {
   current++; // move past "}"
   parserResult.statements.push_back(statement);
   return parserResult.statements.size() - 1;
+}
+
+int Parser::parseFunction() {
+  if (!nextTokenIs(TokenType::LParen)) {
+    errors.push_back(expectedTokenError(TokenType::LParen, nextToken().type));
+    return -1;
+  }
+  current++; // move to "("
+  Expression expression;
+  expression.kind = ExpressionKind::FUNCTION;
+  expression.parameters = parseFunctionParams();
+  expression.bodyStmtIndex = parseBlockStatement();
+  parserResult.expressions.push_back(expression);
+  return parserResult.expressions.size() - 1;
+}
+
+std::vector<std::string> Parser::parseFunctionParams() {
+  std::vector<std::string> params;
+  if (!currentTokenIs(TokenType::LParen)) {
+    // TODO: error
+    return params;
+  }
+  current++; // move past "("
+  
+  // No params => "()"
+  if (currentTokenIs(TokenType::RParen)) {
+      return params;
+  }
+  
+  if (!currentTokenIs(TokenType::Identifier)) {
+    errors.push_back(
+        expectedTokenError(TokenType::Identifier, currentToken().type));
+    return params;
+  }
+  params.push_back(currentToken().literal);
+  current++;
+  while (currentTokenIs(TokenType::Comma)) {
+    current++;
+    if (!currentTokenIs(TokenType::Identifier)) {
+      errors.push_back(
+          expectedTokenError(TokenType::Identifier, currentToken().type));
+      return params;
+    }
+    params.push_back(currentToken().literal);
+    current++;
+  }
+  if (!currentTokenIs(TokenType::RParen)) {
+    // TODO: error
+  }
+  return params;
 }
 
 std::string expectedTokenError(TokenType expected, TokenType got) {
