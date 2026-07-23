@@ -293,7 +293,7 @@ int Parser::parseFunction() {
 std::vector<std::string> Parser::parseFunctionParams() {
   std::vector<std::string> params;
   if (!currentTokenIs(TokenType::LParen)) {
-    // TODO: error
+    errors.push_back(expectedTokenError(TokenType::LParen, currentToken().type));
     return params;
   }
   current++; // move past "("
@@ -321,7 +321,7 @@ std::vector<std::string> Parser::parseFunctionParams() {
     current++;
   }
   if (!currentTokenIs(TokenType::RParen)) {
-    // TODO: error
+    errors.push_back(expectedTokenError(TokenType::RParen, currentToken().type));
   }
   return params;
 }

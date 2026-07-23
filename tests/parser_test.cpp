@@ -687,4 +687,29 @@ TEST(Parser, ParseFunctionExpressionMissingCloseParen) {
   EXPECT_FALSE(parser.errors.empty());
 }
 
+TEST(Parser, ParseFunctionParamsMissingOpenParen) {
+  std::vector<Token> tokens = tokenize("x)");
+  Parser parser{tokens};
+
+  std::vector<std::string> params = parser.parseFunctionParams();
+
+  EXPECT_TRUE(params.empty());
+  ASSERT_EQ(parser.errors.size(), 1u);
+  EXPECT_EQ(parser.errors[0],
+            "Expected next token to be LParen, got Identifier");
+}
+
+TEST(Parser, ParseFunctionParamsMissingCloseParen) {
+  std::vector<Token> tokens = tokenize("(x");
+  Parser parser{tokens};
+
+  std::vector<std::string> params = parser.parseFunctionParams();
+
+  ASSERT_EQ(params.size(), 1u);
+  EXPECT_EQ(params[0], "x");
+  ASSERT_EQ(parser.errors.size(), 1u);
+  EXPECT_EQ(parser.errors[0],
+            "Expected next token to be RParen, got EndOfFile");
+}
+
 } // namespace
