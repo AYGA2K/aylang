@@ -14,6 +14,7 @@ std::unordered_map<TokenType, Precedence> precedences{
     {TokenType::Plus, Precedence::SUM},
     {TokenType::Slash, Precedence::PRODUCT},
     {TokenType::Star, Precedence::PRODUCT},
+    {TokenType::LParen, Precedence::CALL},
 };
 
 bool Parser::currentTokenIs(TokenType type) {
@@ -293,16 +294,17 @@ int Parser::parseFunction() {
 std::vector<std::string> Parser::parseFunctionParams() {
   std::vector<std::string> params;
   if (!currentTokenIs(TokenType::LParen)) {
-    errors.push_back(expectedTokenError(TokenType::LParen, currentToken().type));
+    errors.push_back(
+        expectedTokenError(TokenType::LParen, currentToken().type));
     return params;
   }
   current++; // move past "("
-  
+
   // No params => "()"
   if (currentTokenIs(TokenType::RParen)) {
-      return params;
+    return params;
   }
-  
+
   if (!currentTokenIs(TokenType::Identifier)) {
     errors.push_back(
         expectedTokenError(TokenType::Identifier, currentToken().type));
@@ -321,8 +323,40 @@ std::vector<std::string> Parser::parseFunctionParams() {
     current++;
   }
   if (!currentTokenIs(TokenType::RParen)) {
-    errors.push_back(expectedTokenError(TokenType::RParen, currentToken().type));
+    errors.push_back(
+        expectedTokenError(TokenType::RParen, currentToken().type));
   }
+  return params;
+}
+
+int Parser::parseCallExpression(int leftExprIndex) {
+  Expression expression;
+  expression.kind = ExpressionKind::CALL;
+  expression.funcName = parserResult.expressions[leftExprIndex].stringValue;
+  expression.paramsIndexes = parseCallParams();
+  parserResult.expressions.push_back(expression);
+  return parserResult.expressions.size() - 1;
+}
+
+std::vector<int> Parser::parseCallParams() {
+  std::vector<int> params;
+  current++; // move past "("
+
+  // No params => "()"
+  if (currentTokenIs(TokenType::RParen)) {
+    return params;
+  }
+
+  params.push_back(parseExpression(Precedence::LOWEST));
+  while (nextTokenIs(TokenType::Comma)) {
+    current += 2; // move past the current param and the comma
+    params.push_back(parseExpression(Precedence::LOWEST));
+  }
+  if (!nextTokenIs(TokenType::RParen)) {
+    errors.push_back(expectedTokenError(TokenType::RParen, nextToken().type));
+    return params;
+  }
+  current++; // move to ")"
   return params;
 }
 

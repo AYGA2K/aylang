@@ -12,7 +12,8 @@ enum class ExpressionKind {
   UNARY,
   STAR,
   IF,
-  FUNCTION
+  FUNCTION,
+  CALL
 };
 
 enum class BinaryOperator {
@@ -62,4 +63,8 @@ struct Expression {
   // Functions
   std::vector<std::string> parameters;
   int bodyStmtIndex;
+
+  // Call expression
+  std::string funcName;
+  std::vector<int> paramsIndexes;
 };

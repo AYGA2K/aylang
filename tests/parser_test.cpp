@@ -712,4 +712,78 @@ TEST(Parser, ParseFunctionParamsMissingCloseParen) {
             "Expected next token to be RParen, got EndOfFile");
 }
 
+TEST(Parser, ParseCallExpressionNoArgs) {
+  std::vector<Token> tokens = tokenize("add();");
+  Parser parser{tokens};
+
+  parser.parseExpressionStatment();
+
+  ASSERT_FALSE(parser.parserResult.statements.empty());
+  Expression expression =
+      at(parser, parser.parserResult.statements[0].expressionIndex);
+  EXPECT_EQ(static_cast<int>(expression.kind),
+            static_cast<int>(ExpressionKind::CALL));
+  EXPECT_EQ(expression.funcName, "add");
+  EXPECT_TRUE(expression.paramsIndexes.empty());
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseCallExpressionSingleArg) {
+  std::vector<Token> tokens = tokenize("add(1);");
+  Parser parser{tokens};
+
+  parser.parseExpressionStatment();
+
+  ASSERT_FALSE(parser.parserResult.statements.empty());
+  Expression expression =
+      at(parser, parser.parserResult.statements[0].expressionIndex);
+  EXPECT_EQ(static_cast<int>(expression.kind),
+            static_cast<int>(ExpressionKind::CALL));
+  EXPECT_EQ(expression.funcName, "add");
+  ASSERT_EQ(expression.paramsIndexes.size(), 1u);
+  EXPECT_DOUBLE_EQ(at(parser, expression.paramsIndexes[0]).numValue, 1.0);
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseCallExpressionMultipleArgs) {
+  std::vector<Token> tokens = tokenize("add(1, 2 * 3, 4 + 5);");
+  Parser parser{tokens};
+
+  parser.parseExpressionStatment();
+
+  ASSERT_FALSE(parser.parserResult.statements.empty());
+  Expression expression =
+      at(parser, parser.parserResult.statements[0].expressionIndex);
+  EXPECT_EQ(static_cast<int>(expression.kind),
+            static_cast<int>(ExpressionKind::CALL));
+  EXPECT_EQ(expression.funcName, "add");
+  ASSERT_EQ(expression.paramsIndexes.size(), 3u);
+
+  EXPECT_DOUBLE_EQ(at(parser, expression.paramsIndexes[0]).numValue, 1.0);
+
+  Expression second = at(parser, expression.paramsIndexes[1]);
+  EXPECT_EQ(static_cast<int>(second.kind),
+            static_cast<int>(ExpressionKind::BINARY));
+  EXPECT_EQ(static_cast<int>(second.binaryOperator),
+            static_cast<int>(BinaryOperator::MULTIPLY));
+
+  Expression third = at(parser, expression.paramsIndexes[2]);
+  EXPECT_EQ(static_cast<int>(third.kind),
+            static_cast<int>(ExpressionKind::BINARY));
+  EXPECT_EQ(static_cast<int>(third.binaryOperator),
+            static_cast<int>(BinaryOperator::ADD));
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseCallExpressionMissingCloseParen) {
+  std::vector<Token> tokens = tokenize("add(1, 2;");
+  Parser parser{tokens};
+
+  parser.parseExpressionStatment();
+
+  ASSERT_FALSE(parser.errors.empty());
+  EXPECT_EQ(parser.errors[0],
+            "Expected next token to be RParen, got Semicolon");
+}
+
 } // namespace

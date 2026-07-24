@@ -63,6 +63,10 @@ struct Parser {
     registerInfix(TokenType::NotEqual, binary);
     registerInfix(TokenType::LessThan, binary);
     registerInfix(TokenType::GreaterThan, binary);
+
+    registerInfix(TokenType::LParen, [this](int leftExprIndex) {
+      return parseCallExpression(leftExprIndex);
+    });
   }
   Token currentToken();
   Token nextToken();
@@ -85,6 +89,8 @@ struct Parser {
   int parseBlockStatement();
   int parseFunction();
   std::vector<std::string> parseFunctionParams();
+  int parseCallExpression(int leftExprIndex);
+  std::vector<int> parseCallParams();
   void registerPrefix(TokenType tokenType, PrefixParseFn fn);
   void registerInfix(TokenType tokenType, InfixParseFn fn);
 };
