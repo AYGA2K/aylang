@@ -132,6 +132,17 @@ void Parser::parseVarStatement() {
   parserResult.statements.push_back(statement);
 }
 
+void Parser::parseReturnStatement() {
+  current++; // skip "return"
+  Statement statement;
+  statement.kind = StatementKind::RETURN;
+  statement.expressionIndex = parseExpression(Precedence::LOWEST);
+  if (nextTokenIs(TokenType::Semicolon)) {
+    current++;
+  }
+  parserResult.statements.push_back(statement);
+}
+
 int Parser::parseExpression(Precedence precedence) {
   auto prefix = prefixFns[currentToken().type];
   if (!prefix) {

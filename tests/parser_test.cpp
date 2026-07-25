@@ -786,4 +786,70 @@ TEST(Parser, ParseCallExpressionMissingCloseParen) {
             "Expected next token to be RParen, got Semicolon");
 }
 
+TEST(Parser, ParseReturnStatementNumber) {
+  std::vector<Token> tokens = tokenize("return 5;");
+  Parser parser{tokens};
+
+  parser.parseReturnStatement();
+
+  ASSERT_FALSE(parser.parserResult.statements.empty());
+  Statement statement = parser.parserResult.statements[0];
+  EXPECT_EQ(static_cast<int>(statement.kind),
+            static_cast<int>(StatementKind::RETURN));
+  ASSERT_GE(statement.expressionIndex, 0);
+  Expression expression = at(parser, statement.expressionIndex);
+  EXPECT_EQ(static_cast<int>(expression.kind),
+            static_cast<int>(ExpressionKind::LITERAL_NUMBER));
+  EXPECT_DOUBLE_EQ(expression.numValue, 5.0);
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseReturnStatementIdentifier) {
+  std::vector<Token> tokens = tokenize("return foobar;");
+  Parser parser{tokens};
+
+  parser.parseReturnStatement();
+
+  ASSERT_FALSE(parser.parserResult.statements.empty());
+  Statement statement = parser.parserResult.statements[0];
+  EXPECT_EQ(static_cast<int>(statement.kind),
+            static_cast<int>(StatementKind::RETURN));
+  ASSERT_GE(statement.expressionIndex, 0);
+  Expression expression = at(parser, statement.expressionIndex);
+  EXPECT_EQ(static_cast<int>(expression.kind),
+            static_cast<int>(ExpressionKind::IDENTIFIER));
+  EXPECT_EQ(expression.stringValue, "foobar");
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseReturnStatementExpression) {
+  std::vector<Token> tokens = tokenize("return 5 + 10;");
+  Parser parser{tokens};
+
+  parser.parseReturnStatement();
+
+  ASSERT_FALSE(parser.parserResult.statements.empty());
+  Statement statement = parser.parserResult.statements[0];
+  EXPECT_EQ(static_cast<int>(statement.kind),
+            static_cast<int>(StatementKind::RETURN));
+  ASSERT_GE(statement.expressionIndex, 0);
+  Expression expression = at(parser, statement.expressionIndex);
+  EXPECT_EQ(static_cast<int>(expression.kind),
+            static_cast<int>(ExpressionKind::BINARY));
+  EXPECT_EQ(static_cast<int>(expression.binaryOperator),
+            static_cast<int>(BinaryOperator::ADD));
+  EXPECT_DOUBLE_EQ(at(parser, expression.leftExprIndex).numValue, 5.0);
+  EXPECT_DOUBLE_EQ(at(parser, expression.rightExprIndex).numValue, 10.0);
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseReturnStatementConsumesSemicolon) {
+  std::vector<Token> tokens = tokenize("return 5;");
+  Parser parser{tokens};
+
+  parser.parseReturnStatement();
+
+  EXPECT_TRUE(parser.currentTokenIs(TokenType::Semicolon));
+}
+
 } // namespace

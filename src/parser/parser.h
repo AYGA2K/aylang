@@ -77,6 +77,7 @@ struct Parser {
   void parse();
   int parseStatement();
   void parseVarStatement();
+  void parseReturnStatement();
   void parseExpressionStatment();
   int parseExpression(Precedence precedence);
   int parseIdentifier();
