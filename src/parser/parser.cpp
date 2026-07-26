@@ -39,7 +39,7 @@ Token Parser::nextToken() {
   return tokens[current + 1];
 }
 
-Precedence Parser::nextPrecendence() {
+Precedence Parser::nextPrecedence() {
   auto it = precedences.find(nextToken().type);
   if (it == precedences.end()) {
     return Precedence::LOWEST;
@@ -47,7 +47,7 @@ Precedence Parser::nextPrecendence() {
   return it->second;
 }
 
-Precedence Parser::currentPrecendence() {
+Precedence Parser::currentPrecedence() {
   auto it = precedences.find(currentToken().type);
   if (it == precedences.end()) {
     return Precedence::LOWEST;
@@ -79,9 +79,10 @@ int Parser::parseStatement() {
                      tokenTypeToString(currentToken().type));
     return -1;
   case TokenType::Return:
-    // parseReturnStatment();
+    parseReturnStatement();
+    break;
   default:
-    parseExpressionStatment();
+    parseExpressionStatement();
     break;
   }
   if (parserResult.statements.size() == statementsBefore) {
@@ -92,7 +93,7 @@ int Parser::parseStatement() {
   return parserResult.statements.size() - 1;
 }
 
-void Parser::parseExpressionStatment() {
+void Parser::parseExpressionStatement() {
   Statement statement;
   statement.kind = StatementKind::EXPRESSION;
   statement.expressionIndex = parseExpression(Precedence::LOWEST);
@@ -151,7 +152,7 @@ int Parser::parseExpression(Precedence precedence) {
     return -1;
   }
   int leftExprIndex = prefix();
-  while (!nextTokenIs(TokenType::Semicolon) && nextPrecendence() > precedence) {
+  while (!nextTokenIs(TokenType::Semicolon) && nextPrecedence() > precedence) {
     current++;
     auto infix = infixFns[currentToken().type];
     if (!infix) {
@@ -216,9 +217,9 @@ int Parser::parseBinary(int leftExprIndex) {
   } else if (type == TokenType::GreaterThan) {
     expression.binaryOperator = BinaryOperator::GREATER_THAN;
   }
-  Precedence precendence = currentPrecendence();
+  Precedence precedence = currentPrecedence();
   current++;
-  expression.rightExprIndex = parseExpression(precendence);
+  expression.rightExprIndex = parseExpression(precedence);
   parserResult.expressions.push_back(expression);
   return parserResult.expressions.size() - 1;
 }
@@ -256,7 +257,7 @@ int Parser::parseIfExpression() {
         expectedTokenError(TokenType::RParen, currentToken().type));
     return -1;
   }
-  expression.consquenceStmtIndex = parseBlockStatement();
+  expression.consequenceStmtIndex = parseBlockStatement();
   if (currentTokenIs(TokenType::Else)) {
     expression.alternativeStmtIndex = parseBlockStatement();
   }

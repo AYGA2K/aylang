@@ -72,13 +72,13 @@ struct Parser {
   Token nextToken();
   bool nextTokenIs(TokenType type);
   bool currentTokenIs(TokenType type);
-  Precedence currentPrecendence();
-  Precedence nextPrecendence();
+  Precedence currentPrecedence();
+  Precedence nextPrecedence();
   void parse();
   int parseStatement();
   void parseVarStatement();
   void parseReturnStatement();
-  void parseExpressionStatment();
+  void parseExpressionStatement();
   int parseExpression(Precedence precedence);
   int parseIdentifier();
   int parseNumber();

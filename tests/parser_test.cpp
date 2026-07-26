@@ -174,7 +174,7 @@ TEST(Parser, IdentifierExpressionStatement) {
   std::vector<Token> tokens = tokenize("foobar;");
   Parser parser{tokens};
 
-  parser.parseExpressionStatment();
+  parser.parseExpressionStatement();
 
   ASSERT_FALSE(parser.parserResult.statements.empty());
   Statement statement = parser.parserResult.statements[0];
@@ -193,7 +193,7 @@ TEST(Parser, NumberExpressionStatement) {
   std::vector<Token> tokens = tokenize("5;");
   Parser parser{tokens};
 
-  parser.parseExpressionStatment();
+  parser.parseExpressionStatement();
 
   ASSERT_FALSE(parser.parserResult.statements.empty());
   Statement statement = parser.parserResult.statements[0];
@@ -232,7 +232,7 @@ TEST(Parser, BooleanExpressionStatementTrue) {
   std::vector<Token> tokens = tokenize("true;");
   Parser parser{tokens};
 
-  parser.parseExpressionStatment();
+  parser.parseExpressionStatement();
 
   ASSERT_FALSE(parser.parserResult.statements.empty());
   Statement statement = parser.parserResult.statements[0];
@@ -251,7 +251,7 @@ TEST(Parser, BooleanExpressionStatementFalse) {
   std::vector<Token> tokens = tokenize("false;");
   Parser parser{tokens};
 
-  parser.parseExpressionStatment();
+  parser.parseExpressionStatement();
 
   ASSERT_FALSE(parser.parserResult.statements.empty());
   Statement statement = parser.parserResult.statements[0];
@@ -270,7 +270,7 @@ TEST(Parser, ParseBinaryAdd) {
   std::vector<Token> tokens = tokenize("1 + 2;");
   Parser parser{tokens};
 
-  parser.parseExpressionStatment();
+  parser.parseExpressionStatement();
 
   ASSERT_FALSE(parser.parserResult.statements.empty());
   Expression expression =
@@ -291,7 +291,7 @@ TEST(Parser, ParseBinaryProductBindsTighterThanSum) {
   std::vector<Token> tokens = tokenize("1 + 2 * 3;");
   Parser parser{tokens};
 
-  parser.parseExpressionStatment();
+  parser.parseExpressionStatement();
 
   ASSERT_FALSE(parser.parserResult.statements.empty());
   // Expect 1 + (2 * 3): root is ADD, right child is MULTIPLY.
@@ -319,7 +319,7 @@ TEST(Parser, ParseBinaryLeftAssociative) {
   std::vector<Token> tokens = tokenize("1 - 2 - 3;");
   Parser parser{tokens};
 
-  parser.parseExpressionStatment();
+  parser.parseExpressionStatement();
 
   ASSERT_FALSE(parser.parserResult.statements.empty());
   // Expect (1 - 2) - 3: root is SUBTRACT, left child is SUBTRACT.
@@ -347,7 +347,7 @@ TEST(Parser, ParseBinarySumBindsTighterThanComparison) {
   std::vector<Token> tokens = tokenize("1 + 2 == 3;");
   Parser parser{tokens};
 
-  parser.parseExpressionStatment();
+  parser.parseExpressionStatement();
 
   ASSERT_FALSE(parser.parserResult.statements.empty());
   // Expect (1 + 2) == 3: root is EQUAL, left child is ADD.
@@ -400,7 +400,7 @@ TEST(Parser, ParseGroupedExpressionOverridesPrecedence) {
   std::vector<Token> tokens = tokenize("(1 + 2) * 3;");
   Parser parser{tokens};
 
-  parser.parseExpressionStatment();
+  parser.parseExpressionStatement();
 
   ASSERT_FALSE(parser.parserResult.statements.empty());
   // Expect (1 + 2) * 3: root is MULTIPLY, left child is ADD.
@@ -440,9 +440,9 @@ TEST(Parser, ParseIfExpression) {
             static_cast<int>(ExpressionKind::IDENTIFIER));
   EXPECT_EQ(condition.stringValue, "x");
 
-  ASSERT_GE(expression.consquenceStmtIndex, 0);
+  ASSERT_GE(expression.consequenceStmtIndex, 0);
   Statement block =
-      parser.parserResult.statements[expression.consquenceStmtIndex];
+      parser.parserResult.statements[expression.consequenceStmtIndex];
   EXPECT_EQ(static_cast<int>(block.kind),
             static_cast<int>(StatementKind::BLOCK));
   ASSERT_EQ(block.statementsIndexes.size(), 1u);
@@ -487,9 +487,9 @@ TEST(Parser, ParseIfExpressionMultipleConsequenceStatements) {
   ASSERT_GE(index, 0);
   Expression expression = at(parser, index);
 
-  ASSERT_GE(expression.consquenceStmtIndex, 0);
+  ASSERT_GE(expression.consequenceStmtIndex, 0);
   Statement block =
-      parser.parserResult.statements[expression.consquenceStmtIndex];
+      parser.parserResult.statements[expression.consequenceStmtIndex];
   ASSERT_EQ(block.statementsIndexes.size(), 2u);
 
   Expression first =
@@ -513,9 +513,9 @@ TEST(Parser, ParseIfElseExpression) {
   EXPECT_EQ(static_cast<int>(expression.kind),
             static_cast<int>(ExpressionKind::IF));
 
-  ASSERT_GE(expression.consquenceStmtIndex, 0);
+  ASSERT_GE(expression.consequenceStmtIndex, 0);
   Statement consequenceBlock =
-      parser.parserResult.statements[expression.consquenceStmtIndex];
+      parser.parserResult.statements[expression.consequenceStmtIndex];
   ASSERT_EQ(consequenceBlock.statementsIndexes.size(), 1u);
   Expression consequenceExpr =
       at(parser, parser.parserResult
@@ -588,7 +588,7 @@ TEST(Parser, ParseIfExpressionMissingBlock) {
   ASSERT_GE(index, 0);
   Expression expression = at(parser, index);
 
-  EXPECT_EQ(expression.consquenceStmtIndex, -1);
+  EXPECT_EQ(expression.consequenceStmtIndex, -1);
 }
 
 TEST(Parser, ParseFunctionExpressionNoParams) {
@@ -716,7 +716,7 @@ TEST(Parser, ParseCallExpressionNoArgs) {
   std::vector<Token> tokens = tokenize("add();");
   Parser parser{tokens};
 
-  parser.parseExpressionStatment();
+  parser.parseExpressionStatement();
 
   ASSERT_FALSE(parser.parserResult.statements.empty());
   Expression expression =
@@ -732,7 +732,7 @@ TEST(Parser, ParseCallExpressionSingleArg) {
   std::vector<Token> tokens = tokenize("add(1);");
   Parser parser{tokens};
 
-  parser.parseExpressionStatment();
+  parser.parseExpressionStatement();
 
   ASSERT_FALSE(parser.parserResult.statements.empty());
   Expression expression =
@@ -749,7 +749,7 @@ TEST(Parser, ParseCallExpressionMultipleArgs) {
   std::vector<Token> tokens = tokenize("add(1, 2 * 3, 4 + 5);");
   Parser parser{tokens};
 
-  parser.parseExpressionStatment();
+  parser.parseExpressionStatement();
 
   ASSERT_FALSE(parser.parserResult.statements.empty());
   Expression expression =
@@ -779,7 +779,7 @@ TEST(Parser, ParseCallExpressionMissingCloseParen) {
   std::vector<Token> tokens = tokenize("add(1, 2;");
   Parser parser{tokens};
 
-  parser.parseExpressionStatment();
+  parser.parseExpressionStatement();
 
   ASSERT_FALSE(parser.errors.empty());
   EXPECT_EQ(parser.errors[0],
