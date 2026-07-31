@@ -1,12 +1,15 @@
+#include "interpreter/evaluator.h"
+#include "interpreter/value.h"
 #include "lexer/lexer.h"
 #include "parser/parser.h"
 #include <iostream>
+#include <print>
 #include <vector>
 
 int main() {
   std::string input;
   while (true) {
-    std::cout << ">> ";
+    std::print(">> ");
     if (!std::getline(std::cin, input) || input == "exit") {
       break;
     }
@@ -19,13 +22,13 @@ int main() {
     parser.parse();
     if (!parser.errors.empty()) {
       for (const std::string &error : parser.errors) {
-        std::cout << "\t" << error << "\n";
+        std::println("{}", error);
       }
       continue;
     }
-    std::cout << "parsed " << parser.parserResult.statements.size()
-              << " statement(s)\n";
+    Evaluator evaluator{.parserResult = parser.parserResult};
+    std::println("{}", inspect(evaluator.evalStaments()));
   }
-  std::cout << "\n";
+  std::println("");
   return 0;
 }

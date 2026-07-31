@@ -65,7 +65,6 @@ void Parser::parse() {
 // Returns the index of the parsed statement in parserResult.statements (-1
 // means none).
 int Parser::parseStatement() {
-  size_t statementsBefore = parserResult.statements.size();
   switch (currentToken().type) {
   case TokenType::Var:
     parseVarStatement();
@@ -81,14 +80,12 @@ int Parser::parseStatement() {
   case TokenType::Return:
     parseReturnStatement();
     break;
+  case TokenType::Semicolon:
+    current++;
+    break;
   default:
     parseExpressionStatement();
     break;
-  }
-  if (parserResult.statements.size() == statementsBefore) {
-    errors.push_back("No statement produced for " +
-                     tokenTypeToString(currentToken().type));
-    return -1;
   }
   return parserResult.statements.size() - 1;
 }
