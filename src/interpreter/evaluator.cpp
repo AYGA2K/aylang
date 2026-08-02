@@ -4,10 +4,10 @@
 #include "parser/statement.h"
 #include <cstddef>
 
-Value Evaluator::evalStaments() {
+Value Evaluator::evalStatements() {
   Value result;
   for (size_t i = 0; i < parserResult.statements.size(); i++) {
-    result = evalStament(i);
+    result = evalStatement(i);
   }
   return result;
 }
@@ -39,7 +39,7 @@ Value Evaluator::evalExpression(size_t index) {
   return {};
 }
 
-Value Evaluator::evalStament(size_t index) {
+Value Evaluator::evalStatement(size_t index) {
   const Statement &stmt = parserResult.statements[index];
   switch (stmt.kind) {
   case StatementKind::EXPRESSION:

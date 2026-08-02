@@ -7,8 +7,8 @@
 struct Evaluator {
   ParserResult parserResult;
   // Returns the value of the last statement.
-  Value evalStaments();
-  Value evalStament(size_t index);
+  Value evalStatements();
+  Value evalStatement(size_t index);
   Value evalExpression(size_t index);
   Value evalPrefixExpression(UnaryOperator oper, Value rightValue);
   Value evalInfixExpression(BinaryOperator oper, Value leftValue,
