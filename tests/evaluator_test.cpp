@@ -17,7 +17,7 @@ Value eval(const std::string &input) {
   Parser parser{tokens};
   parser.parse();
   Evaluator evaluator{.parserResult = parser.parserResult};
-  return evaluator.evalStaments();
+  return evaluator.evalStatements();
 }
 
 TEST(Evaluator, EvalNumberInteger) {

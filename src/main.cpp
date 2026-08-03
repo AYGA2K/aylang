@@ -27,7 +27,7 @@ int main() {
       continue;
     }
     Evaluator evaluator{.parserResult = parser.parserResult};
-    std::println("{}", inspect(evaluator.evalStaments()));
+    std::println("{}", inspect(evaluator.evalStatements()));
   }
   std::println("");
   return 0;
