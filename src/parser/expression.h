@@ -11,7 +11,6 @@ enum class ExpressionKind {
   BINARY,
   UNARY,
   STAR,
-  IF,
   FUNCTION,
   CALL
 };
@@ -54,11 +53,6 @@ struct Expression {
   // Unary Expression
   UnaryOperator unaryOperator;
   int operandExprIndex = -1;
-
-  // If Expression
-  int conditionExprIndex = -1;
-  int consequenceStmtIndex = -1;
-  int alternativeStmtIndex = -1;
 
   // Functions
   std::vector<std::string> parameters;

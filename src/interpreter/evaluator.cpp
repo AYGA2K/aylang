@@ -2,17 +2,17 @@
 #include "interpreter/value.h"
 #include "parser/expression.h"
 #include "parser/statement.h"
-#include <cstddef>
+#include <vector>
 
 Value Evaluator::evalStatements() {
   Value result;
-  for (size_t i = 0; i < parserResult.statements.size(); i++) {
-    result = evalStatement(i);
+  for (int index : parserResult.programStatementsIndexes) {
+    result = evalStatement(index);
   }
   return result;
 }
 
-Value Evaluator::evalExpression(size_t index) {
+Value Evaluator::evalExpression(int index) {
   const Expression &expr = parserResult.expressions[index];
   switch (expr.kind) {
   case ExpressionKind::LITERAL_NUMBER:
@@ -31,7 +31,6 @@ Value Evaluator::evalExpression(size_t index) {
   case ExpressionKind::IDENTIFIER:
   case ExpressionKind::LITERAL_STRING:
   case ExpressionKind::STAR:
-  case ExpressionKind::IF:
   case ExpressionKind::FUNCTION:
   case ExpressionKind::CALL:
     break;
@@ -39,14 +38,15 @@ Value Evaluator::evalExpression(size_t index) {
   return {};
 }
 
-Value Evaluator::evalStatement(size_t index) {
+Value Evaluator::evalStatement(int index) {
   const Statement &stmt = parserResult.statements[index];
   switch (stmt.kind) {
   case StatementKind::EXPRESSION:
     return evalExpression(stmt.expressionIndex);
+  case StatementKind::BLOCK:
+  case StatementKind::IF:
   case StatementKind::VAR:
   case StatementKind::RETURN:
-  case StatementKind::BLOCK:
     break;
   }
   return {};
@@ -164,4 +164,14 @@ Value Evaluator::evalInfixExpression(BinaryOperator oper, Value leftValue,
     break;
   }
   return {};
+}
+
+bool isTruthy(const Value &value) {
+  if (value.kind == ValueKind::Null) {
+    return false;
+  }
+  if (value.kind == ValueKind::Bool && !value.boolValue) {
+    return false;
+  }
+  return true;
 }

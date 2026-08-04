@@ -57,7 +57,10 @@ Precedence Parser::currentPrecedence() {
 
 void Parser::parse() {
   while (currentToken().type != TokenType::EndOfFile) {
-    parseStatement();
+    int index = parseStatement();
+    if (index != -1) {
+      parserResult.programStatementsIndexes.push_back(index);
+    }
     current++;
   }
 }
@@ -70,7 +73,7 @@ int Parser::parseStatement() {
     parseVarStatement();
     break;
   case TokenType::If:
-    parseIfExpression();
+    parseIfStatement();
     break;
   case TokenType::Else:
   case TokenType::While:
@@ -87,7 +90,7 @@ int Parser::parseStatement() {
     parseExpressionStatement();
     break;
   }
-  return parserResult.statements.size() - 1;
+  return static_cast<int>(parserResult.statements.size()) - 1;
 }
 
 void Parser::parseExpressionStatement() {
@@ -165,7 +168,7 @@ int Parser::parseIdentifier() {
   expression.kind = ExpressionKind::IDENTIFIER;
   expression.stringValue = currentToken().literal;
   parserResult.expressions.push_back(expression);
-  return parserResult.expressions.size() - 1;
+  return static_cast<int>(parserResult.expressions.size()) - 1;
 }
 
 int Parser::parseNumber() {
@@ -173,7 +176,7 @@ int Parser::parseNumber() {
   expression.kind = ExpressionKind::LITERAL_NUMBER;
   expression.numValue = std::stod(currentToken().literal);
   parserResult.expressions.push_back(expression);
-  return parserResult.expressions.size() - 1;
+  return static_cast<int>(parserResult.expressions.size()) - 1;
 }
 
 // Parses "!operand" or "-operand"
@@ -189,7 +192,7 @@ int Parser::parseUnary() {
   // Child expressions live in parserResult.expressions, referenced by index
   expression.operandExprIndex = parseExpression(Precedence::UNARY);
   parserResult.expressions.push_back(expression);
-  return parserResult.expressions.size() - 1;
+  return static_cast<int>(parserResult.expressions.size()) - 1;
 }
 
 int Parser::parseBinary(int leftExprIndex) {
@@ -218,7 +221,7 @@ int Parser::parseBinary(int leftExprIndex) {
   current++;
   expression.rightExprIndex = parseExpression(precedence);
   parserResult.expressions.push_back(expression);
-  return parserResult.expressions.size() - 1;
+  return static_cast<int>(parserResult.expressions.size()) - 1;
 }
 
 int Parser::parseBoolean() {
@@ -226,7 +229,7 @@ int Parser::parseBoolean() {
   expression.kind = ExpressionKind::LITERAL_BOOL;
   expression.boolValue = currentToken().type == TokenType::True ? true : false;
   parserResult.expressions.push_back(expression);
-  return parserResult.expressions.size() - 1;
+  return static_cast<int>(parserResult.expressions.size()) - 1;
 }
 
 int Parser::parseGroupedExpression() {
@@ -240,26 +243,27 @@ int Parser::parseGroupedExpression() {
   return exprIndex;
 }
 
-int Parser::parseIfExpression() {
+int Parser::parseIfStatement() {
   if (!nextTokenIs(TokenType::LParen)) {
     errors.push_back(expectedTokenError(TokenType::LParen, nextToken().type));
     return -1;
   }
-  Expression expression;
-  expression.kind = ExpressionKind::IF;
-  current++;
-  expression.conditionExprIndex = parseExpression(Precedence::LOWEST);
+  Statement statement;
+  statement.kind = StatementKind::IF;
+  current++; // move to "("
+  statement.conditionExprIndex = parseExpression(Precedence::LOWEST);
   if (!currentTokenIs(TokenType::RParen)) {
     errors.push_back(
         expectedTokenError(TokenType::RParen, currentToken().type));
     return -1;
   }
-  expression.consequenceStmtIndex = parseBlockStatement();
-  if (currentTokenIs(TokenType::Else)) {
-    expression.alternativeStmtIndex = parseBlockStatement();
+  statement.consequenceStmtIndex = parseBlockStatement();
+  if (nextTokenIs(TokenType::Else)) {
+    current++; // move to "else"
+    statement.alternativeStmtIndex = parseBlockStatement();
   }
-  parserResult.expressions.push_back(expression);
-  return parserResult.expressions.size() - 1;
+  parserResult.statements.push_back(statement);
+  return static_cast<int>(parserResult.statements.size()) - 1;
 }
 
 int Parser::parseBlockStatement() {
@@ -281,9 +285,8 @@ int Parser::parseBlockStatement() {
     errors.push_back(
         expectedTokenError(TokenType::RBrace, currentToken().type));
   }
-  current++; // move past "}"
   parserResult.statements.push_back(statement);
-  return parserResult.statements.size() - 1;
+  return static_cast<int>(parserResult.statements.size()) - 1;
 }
 
 int Parser::parseFunction() {
@@ -297,7 +300,7 @@ int Parser::parseFunction() {
   expression.parameters = parseFunctionParams();
   expression.bodyStmtIndex = parseBlockStatement();
   parserResult.expressions.push_back(expression);
-  return parserResult.expressions.size() - 1;
+  return static_cast<int>(parserResult.expressions.size()) - 1;
 }
 
 std::vector<std::string> Parser::parseFunctionParams() {
@@ -339,12 +342,16 @@ std::vector<std::string> Parser::parseFunctionParams() {
 }
 
 int Parser::parseCallExpression(int leftExprIndex) {
+  if (leftExprIndex < 0) {
+    errors.push_back("Expected an expression before the call parentheses");
+    return -1;
+  }
   Expression expression;
   expression.kind = ExpressionKind::CALL;
   expression.funcName = parserResult.expressions[leftExprIndex].stringValue;
   expression.paramsIndexes = parseCallParams();
   parserResult.expressions.push_back(expression);
-  return parserResult.expressions.size() - 1;
+  return static_cast<int>(parserResult.expressions.size()) - 1;
 }
 
 std::vector<int> Parser::parseCallParams() {

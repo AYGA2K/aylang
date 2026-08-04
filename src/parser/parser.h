@@ -27,6 +27,8 @@ using InfixParseFn = std::function<int(int)>;
 struct ParserResult {
   std::vector<Statement> statements;
   std::vector<Expression> expressions;
+  // Indexes of statements which will be evaluated: block statements are not included 
+  std::vector<int> programStatementsIndexes;
 };
 
 struct Parser {
@@ -86,7 +88,7 @@ struct Parser {
   int parseBinary(int leftExprIndex);
   int parseBoolean();
   int parseGroupedExpression();
-  int parseIfExpression();
+  int parseIfStatement();
   int parseBlockStatement();
   int parseFunction();
   std::vector<std::string> parseFunctionParams();

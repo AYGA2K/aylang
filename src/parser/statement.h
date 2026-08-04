@@ -7,6 +7,7 @@ enum class StatementKind {
   RETURN,
   EXPRESSION,
   BLOCK,
+  IF,
 };
 
 struct Statement {
@@ -19,5 +20,11 @@ struct Statement {
   // or expression statement expression (-1 means none).
   int expressionIndex = -1;
 
+  // Block statements indexes
   std::vector<int> statementsIndexes;
+
+  // If Statement
+  int conditionExprIndex = -1;
+  int consequenceStmtIndex = -1;
+  int alternativeStmtIndex = -1;
 };
