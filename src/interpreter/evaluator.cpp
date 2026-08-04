@@ -44,7 +44,9 @@ Value Evaluator::evalStatement(int index) {
   case StatementKind::EXPRESSION:
     return evalExpression(stmt.expressionIndex);
   case StatementKind::BLOCK:
+    return evalBlockStatement(index);
   case StatementKind::IF:
+    return evalIfStatement(index);
   case StatementKind::VAR:
   case StatementKind::RETURN:
     break;
@@ -174,4 +176,24 @@ bool isTruthy(const Value &value) {
     return false;
   }
   return true;
+}
+
+Value Evaluator::evalIfStatement(int index) {
+  const Statement &stmt = parserResult.statements[index];
+  Value conditionValue = evalExpression(stmt.conditionExprIndex);
+  if (isTruthy(conditionValue)) {
+    return evalBlockStatement(stmt.consequenceStmtIndex);
+  } else if (stmt.alternativeStmtIndex != -1) {
+    return evalBlockStatement(stmt.alternativeStmtIndex);
+  }
+  return {};
+}
+
+Value Evaluator::evalBlockStatement(int index) {
+  const Statement &stmt = parserResult.statements[index];
+  Value returnedValue;
+  for (int index : stmt.statementsIndexes) {
+      returnedValue = evalStatement(index);
+  }
+  return returnedValue;
 }

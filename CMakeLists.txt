@@ -19,8 +19,11 @@ list(REMOVE_ITEM LIB_SOURCES "${CMAKE_CURRENT_LIST_DIR}/src/main.cpp")
 add_library(${PROJECT_NAME}_lib STATIC ${LIB_SOURCES})
 target_include_directories(${PROJECT_NAME}_lib PUBLIC ${PROJECT_INCLUDE})
 
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(READLINE REQUIRED IMPORTED_TARGET readline)
+
 add_executable(${PROJECT_NAME} src/main.cpp)
-target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}_lib)
+target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}_lib PkgConfig::READLINE)
 
 option(BUILD_TESTING "Build the unit tests" ON)
 if(BUILD_TESTING)
