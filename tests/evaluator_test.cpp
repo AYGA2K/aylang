@@ -349,4 +349,39 @@ TEST(Evaluator, EvalDoubleUnaryMinus) {
   EXPECT_DOUBLE_EQ(value.numValue, 5.0);
 }
 
+TEST(Evaluator, EvalReturnStatement) {
+  Value value = eval("return 10;");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.numValue, 10.0);
+}
+
+TEST(Evaluator, EvalReturnStatementExpression) {
+  Value value = eval("return 2 * 5;");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.numValue, 10.0);
+}
+
+TEST(Evaluator, EvalReturnStatementStopsFollowingStatements) {
+  Value value = eval("return 10; 9;");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.numValue, 10.0);
+}
+
+TEST(Evaluator, EvalReturnStatementAfterOtherStatements) {
+  Value value = eval("9; return 2 * 5; 9;");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.numValue, 10.0);
+}
+
+TEST(Evaluator, EvalReturnStatementInsideIfWithMultipleStatements) {
+  Value value = eval("if ((1000 / 2) + 250 * 2 == 1000) { 9999; return 87; 90; }");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.numValue, 87.0);
+}
+
 } // namespace

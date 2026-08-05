@@ -8,6 +8,9 @@ Value Evaluator::evalStatements() {
   Value result;
   for (int index : parserResult.programStatementsIndexes) {
     result = evalStatement(index);
+    if (parserResult.statements[index].kind == StatementKind::RETURN) {
+      return result;
+    }
   }
   return result;
 }
@@ -41,14 +44,14 @@ Value Evaluator::evalExpression(int index) {
 Value Evaluator::evalStatement(int index) {
   const Statement &stmt = parserResult.statements[index];
   switch (stmt.kind) {
-  case StatementKind::EXPRESSION:
-    return evalExpression(stmt.expressionIndex);
   case StatementKind::BLOCK:
     return evalBlockStatement(index);
   case StatementKind::IF:
     return evalIfStatement(index);
   case StatementKind::VAR:
   case StatementKind::RETURN:
+  case StatementKind::EXPRESSION:
+    return evalExpression(stmt.expressionIndex);
     break;
   }
   return {};
@@ -193,7 +196,10 @@ Value Evaluator::evalBlockStatement(int index) {
   const Statement &stmt = parserResult.statements[index];
   Value returnedValue;
   for (int index : stmt.statementsIndexes) {
-      returnedValue = evalStatement(index);
+    returnedValue = evalStatement(index);
+    if (parserResult.statements[index].kind == StatementKind::RETURN) {
+      return returnedValue;
+    }
   }
   return returnedValue;
 }
