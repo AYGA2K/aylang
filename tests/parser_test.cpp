@@ -287,6 +287,48 @@ TEST(Parser, ParseBinaryAdd) {
   EXPECT_TRUE(parser.errors.empty());
 }
 
+TEST(Parser, ParseBinaryLessThanOrEqual) {
+  std::vector<Token> tokens = tokenize("1 <= 2;");
+  Parser parser{tokens};
+
+  parser.parseExpressionStatement();
+
+  ASSERT_FALSE(parser.parserResult.statements.empty());
+  Expression expression =
+      at(parser, parser.parserResult.statements[0].expressionIndex);
+  EXPECT_EQ(static_cast<int>(expression.kind),
+            static_cast<int>(ExpressionKind::BINARY));
+  EXPECT_EQ(static_cast<int>(expression.binaryOperator),
+            static_cast<int>(BinaryOperator::LESS_THAN_OR_EQUAL));
+
+  Expression left = at(parser, expression.leftExprIndex);
+  Expression right = at(parser, expression.rightExprIndex);
+  EXPECT_DOUBLE_EQ(left.numValue, 1.0);
+  EXPECT_DOUBLE_EQ(right.numValue, 2.0);
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseBinaryGreaterThanOrEqual) {
+  std::vector<Token> tokens = tokenize("1 >= 2;");
+  Parser parser{tokens};
+
+  parser.parseExpressionStatement();
+
+  ASSERT_FALSE(parser.parserResult.statements.empty());
+  Expression expression =
+      at(parser, parser.parserResult.statements[0].expressionIndex);
+  EXPECT_EQ(static_cast<int>(expression.kind),
+            static_cast<int>(ExpressionKind::BINARY));
+  EXPECT_EQ(static_cast<int>(expression.binaryOperator),
+            static_cast<int>(BinaryOperator::GREATER_THAN_OR_EQUAL));
+
+  Expression left = at(parser, expression.leftExprIndex);
+  Expression right = at(parser, expression.rightExprIndex);
+  EXPECT_DOUBLE_EQ(left.numValue, 1.0);
+  EXPECT_DOUBLE_EQ(right.numValue, 2.0);
+  EXPECT_TRUE(parser.errors.empty());
+}
+
 TEST(Parser, ParseBinaryProductBindsTighterThanSum) {
   std::vector<Token> tokens = tokenize("1 + 2 * 3;");
   Parser parser{tokens};

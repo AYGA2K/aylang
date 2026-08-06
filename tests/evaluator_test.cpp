@@ -125,6 +125,34 @@ TEST(Evaluator, EvalNumberGreaterThanSmallerLeft) {
   EXPECT_FALSE(value.boolValue);
 }
 
+TEST(Evaluator, EvalNumberLessThanOrEqualEqualNumbers) {
+  Value value = eval("1 <= 1;");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Bool));
+  EXPECT_TRUE(value.boolValue);
+}
+
+TEST(Evaluator, EvalNumberLessThanOrEqualGreaterLeft) {
+  Value value = eval("2 <= 1;");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Bool));
+  EXPECT_FALSE(value.boolValue);
+}
+
+TEST(Evaluator, EvalNumberGreaterThanOrEqualEqualNumbers) {
+  Value value = eval("2 >= 2;");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Bool));
+  EXPECT_TRUE(value.boolValue);
+}
+
+TEST(Evaluator, EvalNumberGreaterThanOrEqualSmallerLeft) {
+  Value value = eval("1 >= 2;");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Bool));
+  EXPECT_FALSE(value.boolValue);
+}
+
 TEST(Evaluator, EvalNegativeNumberLessThan) {
   Value value = eval("-1 < 0;");
 

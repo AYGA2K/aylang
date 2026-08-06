@@ -65,6 +65,8 @@ struct Parser {
     registerInfix(TokenType::NotEqual, binary);
     registerInfix(TokenType::LessThan, binary);
     registerInfix(TokenType::GreaterThan, binary);
+    registerInfix(TokenType::LessThanOrEqual, binary);
+    registerInfix(TokenType::GreaterThanOrEqual, binary);
 
     registerInfix(TokenType::LParen, [this](int leftExprIndex) {
       return parseCallExpression(leftExprIndex);

@@ -10,6 +10,8 @@ std::unordered_map<TokenType, Precedence> precedences{
     {TokenType::NotEqual, Precedence::EQUALS},
     {TokenType::LessThan, Precedence::LESSGREATER},
     {TokenType::GreaterThan, Precedence::LESSGREATER},
+    {TokenType::LessThanOrEqual, Precedence::LESSGREATER},
+    {TokenType::GreaterThanOrEqual, Precedence::LESSGREATER},
     {TokenType::Minus, Precedence::SUM},
     {TokenType::Plus, Precedence::SUM},
     {TokenType::Slash, Precedence::PRODUCT},
@@ -216,6 +218,10 @@ int Parser::parseBinary(int leftExprIndex) {
     expression.binaryOperator = BinaryOperator::LESS_THAN;
   } else if (type == TokenType::GreaterThan) {
     expression.binaryOperator = BinaryOperator::GREATER_THAN;
+  } else if (type == TokenType::LessThanOrEqual) {
+    expression.binaryOperator = BinaryOperator::LESS_THAN_OR_EQUAL;
+  } else if (type == TokenType::GreaterThanOrEqual) {
+    expression.binaryOperator = BinaryOperator::GREATER_THAN_OR_EQUAL;
   }
   Precedence precedence = currentPrecedence();
   current++;
