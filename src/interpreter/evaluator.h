@@ -9,9 +9,9 @@ struct Evaluator {
   Value evalStatements();
   Value evalStatement(int index);
   Value evalExpression(int index);
-  Value evalPrefixExpression(UnaryOperator oper, Value rightValue);
-  Value evalInfixExpression(BinaryOperator oper, Value leftValue,
-                            Value rightValue);
+  Value evalPrefixExpression(UnaryOperator oper, Value &rightValue);
+  Value evalInfixExpression(BinaryOperator oper, const Value &leftValue,
+                            const Value &rightValue);
   Value evalIfStatement(int index);
   Value evalBlockStatement(int index);
 };

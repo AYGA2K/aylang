@@ -62,3 +62,6 @@ struct Expression {
   std::string funcName;
   std::vector<int> paramsIndexes;
 };
+
+std::string unaryOperatorToString(UnaryOperator oper);
+std::string binaryOperatorToString(BinaryOperator oper);

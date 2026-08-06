@@ -384,4 +384,53 @@ TEST(Evaluator, EvalReturnStatementInsideIfWithMultipleStatements) {
   EXPECT_DOUBLE_EQ(value.numValue, 87.0);
 }
 
+TEST(Evaluator, EvalUnaryMinusOnBooleanIsError) {
+  Value value = eval("-true;");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "unknown operator: -Bool");
+}
+
+TEST(Evaluator, EvalUnaryBangOnNumberIsError) {
+  Value value = eval("!5;");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "unknown operator: !Number");
+}
+
+TEST(Evaluator, EvalAddNumberAndErrorIsError) {
+  Value value = eval("5 + (-true);");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "unknown operator: Number + Error");
+}
+
+TEST(Evaluator, EvalMultiplyNumberAndErrorIsError) {
+  Value value = eval("2 * (-true);");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "unknown operator: Number * Error");
+}
+
+TEST(Evaluator, EvalErrorStopsFollowingStatements) {
+  Value value = eval("-true; 5;");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "unknown operator: -Bool");
+}
+
+TEST(Evaluator, EvalErrorInsideIfBlockStopsFollowingStatements) {
+  Value value = eval("if (true) { -true; 9; }");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "unknown operator: -Bool");
+}
+
+TEST(Evaluator, EvalErrorConditionSkipsIfBranches) {
+  Value value = eval("if (-true) { 9; } else { 10; }");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "unknown operator: -Bool");
+}
+
 } // namespace

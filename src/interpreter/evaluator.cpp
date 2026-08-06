@@ -8,7 +8,8 @@ Value Evaluator::evalStatements() {
   Value result;
   for (int index : parserResult.programStatementsIndexes) {
     result = evalStatement(index);
-    if (parserResult.statements[index].kind == StatementKind::RETURN) {
+    if (result.kind == ValueKind::Error ||
+        parserResult.statements[index].kind == StatementKind::RETURN) {
       return result;
     }
   }
@@ -57,7 +58,7 @@ Value Evaluator::evalStatement(int index) {
   return {};
 }
 
-Value Evaluator::evalPrefixExpression(UnaryOperator oper, Value value) {
+Value Evaluator::evalPrefixExpression(UnaryOperator oper, Value &value) {
   if (oper == UnaryOperator::NEGATE && value.kind == ValueKind::Number) {
     value.numValue = -value.numValue;
     return value;
@@ -66,8 +67,9 @@ Value Evaluator::evalPrefixExpression(UnaryOperator oper, Value value) {
     value.boolValue = !value.boolValue;
     return value;
   }
-  // TODO: error
-  return {};
+  std::string message = "unknown operator: " + unaryOperatorToString(oper) +
+                        valueKindToString(value.kind);
+  return Value{.kind = ValueKind::Error, .strValue = message};
 }
 
 // Booleans compare as numbers: false is 0, true is 1.
@@ -79,7 +81,8 @@ static double asNumber(const Value &value) {
   return value.kind == ValueKind::Bool ? value.boolValue : value.numValue;
 }
 
-bool compare(BinaryOperator oper, Value leftValue, Value rightValue) {
+bool compare(BinaryOperator oper, const Value &leftValue,
+             const Value &rightValue) {
   if (isNumeric(leftValue) && isNumeric(rightValue)) {
     double left = asNumber(leftValue);
     double right = asNumber(rightValue);
@@ -96,12 +99,7 @@ bool compare(BinaryOperator oper, Value leftValue, Value rightValue) {
       return left > right;
     case BinaryOperator::GREATER_THAN_OR_EQUAL:
       return left >= right;
-    case BinaryOperator::AND:
-    case BinaryOperator::OR:
-    case BinaryOperator::ADD:
-    case BinaryOperator::SUBTRACT:
-    case BinaryOperator::MULTIPLY:
-    case BinaryOperator::DIVIDE:
+    default:
       break;
     }
     return false;
@@ -109,20 +107,18 @@ bool compare(BinaryOperator oper, Value leftValue, Value rightValue) {
   if (leftValue.kind != rightValue.kind) {
     return false;
   }
-  switch (leftValue.kind) {
-  case ValueKind::Str:
+  if (leftValue.kind == ValueKind::Str) {
     return leftValue.strValue == rightValue.strValue;
-  case ValueKind::Null:
+  }
+  if (leftValue.kind == ValueKind::Null) {
     return true;
-  case ValueKind::Number:
-  case ValueKind::Bool:
-    break;
   }
   return false;
 }
 
-Value Evaluator::evalInfixExpression(BinaryOperator oper, Value leftValue,
-                                     Value rightValue) {
+Value Evaluator::evalInfixExpression(BinaryOperator oper,
+                                     const Value &leftValue,
+                                     const Value &rightValue) {
   switch (oper) {
   case BinaryOperator::NOT_EQUAL:
   case BinaryOperator::EQUAL:
@@ -168,7 +164,10 @@ Value Evaluator::evalInfixExpression(BinaryOperator oper, Value leftValue,
     }
     break;
   }
-  return {};
+  std::string message =
+      "unknown operator: " + valueKindToString(leftValue.kind) + " " +
+      binaryOperatorToString(oper) + " " + valueKindToString(rightValue.kind);
+  return Value{.kind = ValueKind::Error, .strValue = message};
 }
 
 bool isTruthy(const Value &value) {
@@ -184,6 +183,9 @@ bool isTruthy(const Value &value) {
 Value Evaluator::evalIfStatement(int index) {
   const Statement &stmt = parserResult.statements[index];
   Value conditionValue = evalExpression(stmt.conditionExprIndex);
+  if (conditionValue.kind == ValueKind::Error) {
+    return conditionValue;
+  }
   if (isTruthy(conditionValue)) {
     return evalBlockStatement(stmt.consequenceStmtIndex);
   } else if (stmt.alternativeStmtIndex != -1) {
@@ -197,7 +199,8 @@ Value Evaluator::evalBlockStatement(int index) {
   Value returnedValue;
   for (int index : stmt.statementsIndexes) {
     returnedValue = evalStatement(index);
-    if (parserResult.statements[index].kind == StatementKind::RETURN) {
+    if (returnedValue.kind == ValueKind::Error ||
+        parserResult.statements[index].kind == StatementKind::RETURN) {
       return returnedValue;
     }
   }
