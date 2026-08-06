@@ -1,6 +1,7 @@
 #include "lexer.h"
 #include "token.h"
 #include <cctype>
+#include <cstddef>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -127,6 +128,17 @@ Token Lexer::nextToken() {
       return Token{.type = TokenType::GreaterThanOrEqual, .literal = ">="};
     }
     return Token{.type = TokenType::GreaterThan, .literal = ">"};
+  case '"': {
+    size_t start = current;
+    while ((std::isalnum(static_cast<unsigned char>(peekChar())) ||
+            peekChar() == '_') &&
+           peekChar() != '"') {
+      current++;
+    }
+    std::string literal = input.substr(start, current - start);
+    current++; // pass "
+    return Token{.type = TokenType::String, .literal = literal};
+  }
   default:
     if (std::isalpha(static_cast<unsigned char>(c)) || c == '_') {
       std::size_t start = current - 1;

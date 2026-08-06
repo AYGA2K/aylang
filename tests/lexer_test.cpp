@@ -99,6 +99,41 @@ TEST(Lexer, TrailingDotIsNotConsumed) {
                      });
 }
 
+TEST(Lexer, StringLiteral) {
+  expectTokens("\"hello\"", {
+                                {TokenType::String, "hello"},
+                            });
+}
+
+TEST(Lexer, EmptyStringLiteral) {
+  expectTokens("\"\"", {
+                           {TokenType::String, ""},
+                       });
+}
+
+TEST(Lexer, StringLiteralWithUnderscore) {
+  expectTokens("\"foo_bar\"", {
+                                  {TokenType::String, "foo_bar"},
+                              });
+}
+
+TEST(Lexer, AdjacentStringLiterals) {
+  expectTokens("\"foo\" \"bar\"", {
+                                      {TokenType::String, "foo"},
+                                      {TokenType::String, "bar"},
+                                  });
+}
+
+TEST(Lexer, StringLiteralInVarDeclaration) {
+  expectTokens("var x = \"hello\";", {
+                                         {TokenType::Var, "var"},
+                                         {TokenType::Identifier, "x"},
+                                         {TokenType::Assign, "="},
+                                         {TokenType::String, "hello"},
+                                         {TokenType::Semicolon, ";"},
+                                     });
+}
+
 TEST(Lexer, WhitespaceIsSkipped) {
   expectTokens("  \t\n  x\t+\ny", {
                                       {TokenType::Identifier, "x"},

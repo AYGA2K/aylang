@@ -7,6 +7,7 @@ enum class TokenType {
 
   Identifier,
   Number,
+  String,
   Plus,
   Minus,
   Star,

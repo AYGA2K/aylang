@@ -32,8 +32,9 @@ Value Evaluator::evalExpression(int index) {
     Value right = evalExpression(expr.rightExprIndex);
     return evalInfixExpression(expr.binaryOperator, left, right);
   }
-  case ExpressionKind::IDENTIFIER:
   case ExpressionKind::LITERAL_STRING:
+    return Value{.kind = ValueKind::String, .strValue = expr.stringValue};
+  case ExpressionKind::IDENTIFIER:
   case ExpressionKind::STAR:
   case ExpressionKind::FUNCTION:
   case ExpressionKind::CALL:
@@ -70,50 +71,6 @@ Value Evaluator::evalPrefixExpression(UnaryOperator oper, Value &value) {
   std::string message = "unknown operator: " + unaryOperatorToString(oper) +
                         valueKindToString(value.kind);
   return Value{.kind = ValueKind::Error, .strValue = message};
-}
-
-// Booleans compare as numbers: false is 0, true is 1.
-static bool isNumeric(const Value &value) {
-  return value.kind == ValueKind::Number || value.kind == ValueKind::Bool;
-}
-
-static double asNumber(const Value &value) {
-  return value.kind == ValueKind::Bool ? value.boolValue : value.numValue;
-}
-
-bool compare(BinaryOperator oper, const Value &leftValue,
-             const Value &rightValue) {
-  if (isNumeric(leftValue) && isNumeric(rightValue)) {
-    double left = asNumber(leftValue);
-    double right = asNumber(rightValue);
-    switch (oper) {
-    case BinaryOperator::EQUAL:
-      return left == right;
-    case BinaryOperator::NOT_EQUAL:
-      return left != right;
-    case BinaryOperator::LESS_THAN:
-      return left < right;
-    case BinaryOperator::LESS_THAN_OR_EQUAL:
-      return left <= right;
-    case BinaryOperator::GREATER_THAN:
-      return left > right;
-    case BinaryOperator::GREATER_THAN_OR_EQUAL:
-      return left >= right;
-    default:
-      break;
-    }
-    return false;
-  }
-  if (leftValue.kind != rightValue.kind) {
-    return false;
-  }
-  if (leftValue.kind == ValueKind::Str) {
-    return leftValue.strValue == rightValue.strValue;
-  }
-  if (leftValue.kind == ValueKind::Null) {
-    return true;
-  }
-  return false;
 }
 
 Value Evaluator::evalInfixExpression(BinaryOperator oper,
@@ -162,22 +119,17 @@ Value Evaluator::evalInfixExpression(BinaryOperator oper,
         return Value{.kind = ValueKind::Number, .numValue = left / right};
       }
     }
+    if (oper == BinaryOperator::ADD && leftValue.kind == ValueKind::String &&
+        rightValue.kind == ValueKind::String) {
+      return Value{.kind = ValueKind::String,
+                   .strValue = leftValue.strValue + rightValue.strValue};
+    }
     break;
   }
   std::string message =
       "unknown operator: " + valueKindToString(leftValue.kind) + " " +
       binaryOperatorToString(oper) + " " + valueKindToString(rightValue.kind);
   return Value{.kind = ValueKind::Error, .strValue = message};
-}
-
-bool isTruthy(const Value &value) {
-  if (value.kind == ValueKind::Null) {
-    return false;
-  }
-  if (value.kind == ValueKind::Bool && !value.boolValue) {
-    return false;
-  }
-  return true;
 }
 
 Value Evaluator::evalIfStatement(int index) {

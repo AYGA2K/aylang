@@ -27,7 +27,8 @@ using InfixParseFn = std::function<int(int)>;
 struct ParserResult {
   std::vector<Statement> statements;
   std::vector<Expression> expressions;
-  // Indexes of statements which will be evaluated: block statements are not included 
+  // Indexes of statements which will be evaluated: block statements are not
+  // included
   std::vector<int> programStatementsIndexes;
 };
 
@@ -43,6 +44,7 @@ struct Parser {
   Parser(std::vector<Token> &tokens) : tokens(tokens) {
     registerPrefix(TokenType::Identifier, [this] { return parseIdentifier(); });
     registerPrefix(TokenType::Number, [this] { return parseNumber(); });
+    registerPrefix(TokenType::String, [this] { return parseString(); });
     registerPrefix(TokenType::False, [this] { return parseBoolean(); });
     registerPrefix(TokenType::True, [this] { return parseBoolean(); });
     registerPrefix(TokenType::LParen,
@@ -86,6 +88,7 @@ struct Parser {
   int parseExpression(Precedence precedence);
   int parseIdentifier();
   int parseNumber();
+  int parseString();
   int parseUnary();
   int parseBinary(int leftExprIndex);
   int parseBoolean();

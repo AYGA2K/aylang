@@ -58,6 +58,47 @@ TEST(Parser, ParseNumberFloat) {
   EXPECT_TRUE(parser.errors.empty());
 }
 
+TEST(Parser, ParseStringLiteral) {
+  std::vector<Token> tokens = tokenize("\"hello\";");
+  Parser parser{tokens};
+
+  int index = parser.parseString();
+  Expression expression = parser.parserResult.expressions[index];
+
+  EXPECT_EQ(static_cast<int>(expression.kind),
+            static_cast<int>(ExpressionKind::LITERAL_STRING));
+  EXPECT_EQ(expression.stringValue, "hello");
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseEmptyStringLiteral) {
+  std::vector<Token> tokens = tokenize("\"\";");
+  Parser parser{tokens};
+
+  int index = parser.parseString();
+  Expression expression = parser.parserResult.expressions[index];
+
+  EXPECT_EQ(static_cast<int>(expression.kind),
+            static_cast<int>(ExpressionKind::LITERAL_STRING));
+  EXPECT_EQ(expression.stringValue, "");
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseStringLiteralExpressionStatement) {
+  std::vector<Token> tokens = tokenize("\"hello\";");
+  Parser parser{tokens};
+
+  parser.parseExpressionStatement();
+
+  ASSERT_FALSE(parser.parserResult.statements.empty());
+  Expression expression =
+      at(parser, parser.parserResult.statements[0].expressionIndex);
+  EXPECT_EQ(static_cast<int>(expression.kind),
+            static_cast<int>(ExpressionKind::LITERAL_STRING));
+  EXPECT_EQ(expression.stringValue, "hello");
+  EXPECT_TRUE(parser.errors.empty());
+}
+
 TEST(Parser, ParseBooleanTrue) {
   std::vector<Token> tokens = tokenize("true;");
   Parser parser{tokens};

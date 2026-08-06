@@ -181,6 +181,14 @@ int Parser::parseNumber() {
   return static_cast<int>(parserResult.expressions.size()) - 1;
 }
 
+int Parser::parseString() {
+  Expression expression;
+  expression.kind = ExpressionKind::LITERAL_STRING;
+  expression.stringValue = currentToken().literal;
+  parserResult.expressions.push_back(expression);
+  return static_cast<int>(parserResult.expressions.size()) - 1;
+}
+
 // Parses "!operand" or "-operand"
 int Parser::parseUnary() {
   Expression expression;

@@ -48,6 +48,20 @@ TEST(Evaluator, EvalBooleanFalse) {
   EXPECT_FALSE(value.boolValue);
 }
 
+TEST(Evaluator, EvalStringLiteral) {
+  Value value = eval("\"hello\";");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::String));
+  EXPECT_EQ(value.strValue, "hello");
+}
+
+TEST(Evaluator, EvalEmptyStringLiteral) {
+  Value value = eval("\"\";");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::String));
+  EXPECT_EQ(value.strValue, "");
+}
+
 TEST(Evaluator, EvalLastStatement) {
   Value value = eval("1; 2; 3;");
 
@@ -183,6 +197,27 @@ TEST(Evaluator, EvalBooleanEqual) {
 
 TEST(Evaluator, EvalBooleanNotEqual) {
   Value value = eval("true != false;");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Bool));
+  EXPECT_TRUE(value.boolValue);
+}
+
+TEST(Evaluator, EvalStringEqualSameString) {
+  Value value = eval("\"foo\" == \"foo\";");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Bool));
+  EXPECT_TRUE(value.boolValue);
+}
+
+TEST(Evaluator, EvalStringEqualDifferentString) {
+  Value value = eval("\"foo\" == \"bar\";");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Bool));
+  EXPECT_FALSE(value.boolValue);
+}
+
+TEST(Evaluator, EvalStringNotEqualDifferentString) {
+  Value value = eval("\"foo\" != \"bar\";");
 
   EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Bool));
   EXPECT_TRUE(value.boolValue);
@@ -438,6 +473,20 @@ TEST(Evaluator, EvalMultiplyNumberAndErrorIsError) {
 
   EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
   EXPECT_EQ(value.strValue, "unknown operator: Number * Error");
+}
+
+TEST(Evaluator, EvalStringAddConcatenates) {
+  Value value = eval("\"foo\" + \"bar\";");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::String));
+  EXPECT_EQ(value.strValue, "foobar");
+}
+
+TEST(Evaluator, EvalStringSubtractIsError) {
+  Value value = eval("\"foo\" - \"bar\";");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "unknown operator: Str - Str");
 }
 
 TEST(Evaluator, EvalErrorStopsFollowingStatements) {
