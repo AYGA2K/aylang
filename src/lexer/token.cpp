@@ -8,6 +8,9 @@ std::string tokenTypeToString(TokenType type) {
     return "EndOfFile";
   case TokenType::Identifier:
     return "Identifier";
+  case TokenType::String:
+    return "String";
+    break;
   case TokenType::Number:
     return "Number";
   case TokenType::Plus:

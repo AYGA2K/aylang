@@ -510,4 +510,106 @@ TEST(Evaluator, EvalErrorConditionSkipsIfBranches) {
   EXPECT_EQ(value.strValue, "unknown operator: -Bool");
 }
 
+TEST(Evaluator, EvalVarStatementReturnsInitializerValue) {
+  Value value = eval("var x = 5;");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.numValue, 5.0);
+}
+
+TEST(Evaluator, EvalVarStatementBindsName) {
+  Value value = eval("var x = 5; x;");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.numValue, 5.0);
+}
+
+TEST(Evaluator, EvalVarStatementBindsString) {
+  Value value = eval("var greeting = \"hello\"; greeting;");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::String));
+  EXPECT_EQ(value.strValue, "hello");
+}
+
+TEST(Evaluator, EvalVarStatementBindsBoolean) {
+  Value value = eval("var flag = false; flag;");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Bool));
+  EXPECT_FALSE(value.boolValue);
+}
+
+TEST(Evaluator, EvalVarStatementEvaluatesInitializer) {
+  Value value = eval("var x = 2 * 3 + 4; x;");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.numValue, 10.0);
+}
+
+TEST(Evaluator, EvalVarStatementInitializerSeesEarlierNames) {
+  Value value = eval("var a = 1; var b = a + 2; var c = a + b; c;");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.numValue, 4.0);
+}
+
+TEST(Evaluator, EvalVarStatementRebindingOverwrites) {
+  Value value = eval("var x = 5; var x = 9; x;");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.numValue, 9.0);
+}
+
+TEST(Evaluator, EvalVarStatementRebindingChangesKind) {
+  Value value = eval("var x = 5; var x = \"five\"; x;");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::String));
+  EXPECT_EQ(value.strValue, "five");
+}
+
+TEST(Evaluator, EvalVarStatementNameIsUsableInExpressions) {
+  Value value = eval("var x = 5; x * 2;");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.numValue, 10.0);
+}
+
+TEST(Evaluator, EvalVarStatementNameIsUsableAsIfCondition) {
+  Value value = eval("var flag = false; if (flag) { 1; } else { 2; }");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.numValue, 2.0);
+}
+
+TEST(Evaluator, EvalVarStatementWithoutInitializerIsNull) {
+  Value value = eval("var x;");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Null));
+}
+
+TEST(Evaluator, EvalVarStatementWithoutInitializerBindsNull) {
+  Value value = eval("var x; x;");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Null));
+}
+
+TEST(Evaluator, EvalVarStatementErrorInitializerStopsProgram) {
+  Value value = eval("var x = -true; 5;");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "unknown operator: -Bool");
+}
+
+TEST(Evaluator, EvalVarStatementInsideBlockIsVisibleOutside) {
+  Value value = eval("if (true) { var x = 7; } x;");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.numValue, 7.0);
+}
+
+TEST(Evaluator, EvalUnboundNameIsNull) {
+  Value value = eval("nope;");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Null));
+}
+
 } // namespace

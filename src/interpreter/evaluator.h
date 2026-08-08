@@ -1,10 +1,12 @@
 #pragma once
+#include "environment.h"
 #include "parser/expression.h"
 #include "parser/parser.h"
 #include "value.h"
 
 struct Evaluator {
   ParserResult parserResult;
+  Environment environment = Environment{};
   // Returns the value of the last statement.
   Value evalStatements();
   Value evalStatement(int index);
@@ -14,4 +16,5 @@ struct Evaluator {
                             const Value &rightValue);
   Value evalIfStatement(int index);
   Value evalBlockStatement(int index);
+  Value evalVarStatement(int index);
 };

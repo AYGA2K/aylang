@@ -21,6 +21,7 @@ static bool readLine(const char *prompt, std::string &line) {
 
 int main() {
   std::string input;
+  Evaluator evaluator;
   while (readLine(">> ", input)) {
     if (input == "exit") {
       break;
@@ -39,7 +40,7 @@ int main() {
       }
       continue;
     }
-    Evaluator evaluator{.parserResult = parser.parserResult};
+    evaluator.parserResult = parser.parserResult;
     std::println("{}", inspect(evaluator.evalStatements()));
   }
   std::println("");

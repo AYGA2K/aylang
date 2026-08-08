@@ -33,8 +33,10 @@ Value Evaluator::evalExpression(int index) {
     return evalInfixExpression(expr.binaryOperator, left, right);
   }
   case ExpressionKind::LITERAL_STRING:
-    return Value{.kind = ValueKind::String, .strValue = expr.stringValue};
-  case ExpressionKind::IDENTIFIER:
+    return Value{.kind = ValueKind::String, .strValue = expr.literal};
+  case ExpressionKind::IDENTIFIER: {
+    return environment.get(expr.literal);
+  }
   case ExpressionKind::STAR:
   case ExpressionKind::FUNCTION:
   case ExpressionKind::CALL:
@@ -51,6 +53,7 @@ Value Evaluator::evalStatement(int index) {
   case StatementKind::IF:
     return evalIfStatement(index);
   case StatementKind::VAR:
+    return evalVarStatement(index);
   case StatementKind::RETURN:
   case StatementKind::EXPRESSION:
     return evalExpression(stmt.expressionIndex);
@@ -157,4 +160,16 @@ Value Evaluator::evalBlockStatement(int index) {
     }
   }
   return returnedValue;
+}
+
+Value Evaluator::evalVarStatement(int index) {
+  const Statement &stmt = parserResult.statements[index];
+  // If the variable has no initializer it gets null as value
+  if (stmt.expressionIndex < 0) {
+    environment.set(stmt.name, Value{});
+    return {};
+  }
+  Value val = evalExpression(stmt.expressionIndex);
+  environment.set(stmt.name, val);
+  return val;
 }

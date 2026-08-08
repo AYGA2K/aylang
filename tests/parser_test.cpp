@@ -28,7 +28,7 @@ TEST(Parser, ParseIdentifier) {
 
   EXPECT_EQ(static_cast<int>(expression.kind),
             static_cast<int>(ExpressionKind::IDENTIFIER));
-  EXPECT_EQ(expression.stringValue, "foobar");
+  EXPECT_EQ(expression.literal, "foobar");
   EXPECT_TRUE(parser.errors.empty());
 }
 
@@ -67,7 +67,7 @@ TEST(Parser, ParseStringLiteral) {
 
   EXPECT_EQ(static_cast<int>(expression.kind),
             static_cast<int>(ExpressionKind::LITERAL_STRING));
-  EXPECT_EQ(expression.stringValue, "hello");
+  EXPECT_EQ(expression.literal, "hello");
   EXPECT_TRUE(parser.errors.empty());
 }
 
@@ -80,7 +80,7 @@ TEST(Parser, ParseEmptyStringLiteral) {
 
   EXPECT_EQ(static_cast<int>(expression.kind),
             static_cast<int>(ExpressionKind::LITERAL_STRING));
-  EXPECT_EQ(expression.stringValue, "");
+  EXPECT_EQ(expression.literal, "");
   EXPECT_TRUE(parser.errors.empty());
 }
 
@@ -95,7 +95,7 @@ TEST(Parser, ParseStringLiteralExpressionStatement) {
       at(parser, parser.parserResult.statements[0].expressionIndex);
   EXPECT_EQ(static_cast<int>(expression.kind),
             static_cast<int>(ExpressionKind::LITERAL_STRING));
-  EXPECT_EQ(expression.stringValue, "hello");
+  EXPECT_EQ(expression.literal, "hello");
   EXPECT_TRUE(parser.errors.empty());
 }
 
@@ -181,7 +181,7 @@ TEST(Parser, ParseUnaryBangIdentifier) {
       parser.parserResult.expressions[expression.operandExprIndex];
   EXPECT_EQ(static_cast<int>(operand.kind),
             static_cast<int>(ExpressionKind::IDENTIFIER));
-  EXPECT_EQ(operand.stringValue, "foobar");
+  EXPECT_EQ(operand.literal, "foobar");
   EXPECT_TRUE(parser.errors.empty());
 }
 
@@ -226,7 +226,7 @@ TEST(Parser, IdentifierExpressionStatement) {
       parser.parserResult.expressions[statement.expressionIndex];
   EXPECT_EQ(static_cast<int>(expression.kind),
             static_cast<int>(ExpressionKind::IDENTIFIER));
-  EXPECT_EQ(expression.stringValue, "foobar");
+  EXPECT_EQ(expression.literal, "foobar");
   EXPECT_TRUE(parser.errors.empty());
 }
 
@@ -521,7 +521,7 @@ TEST(Parser, ParseIfStatement) {
   Expression condition = at(parser, statement.conditionExprIndex);
   EXPECT_EQ(static_cast<int>(condition.kind),
             static_cast<int>(ExpressionKind::IDENTIFIER));
-  EXPECT_EQ(condition.stringValue, "x");
+  EXPECT_EQ(condition.literal, "x");
 
   ASSERT_GE(statement.consequenceStmtIndex, 0);
   Statement block =
@@ -537,7 +537,7 @@ TEST(Parser, ParseIfStatement) {
   Expression consequenceExpr = at(parser, consequence.expressionIndex);
   EXPECT_EQ(static_cast<int>(consequenceExpr.kind),
             static_cast<int>(ExpressionKind::IDENTIFIER));
-  EXPECT_EQ(consequenceExpr.stringValue, "y");
+  EXPECT_EQ(consequenceExpr.literal, "y");
   EXPECT_TRUE(parser.errors.empty());
 }
 
@@ -557,8 +557,8 @@ TEST(Parser, ParseIfStatementWithBinaryCondition) {
             static_cast<int>(ExpressionKind::BINARY));
   EXPECT_EQ(static_cast<int>(condition.binaryOperator),
             static_cast<int>(BinaryOperator::LESS_THAN));
-  EXPECT_EQ(at(parser, condition.leftExprIndex).stringValue, "x");
-  EXPECT_EQ(at(parser, condition.rightExprIndex).stringValue, "y");
+  EXPECT_EQ(at(parser, condition.leftExprIndex).literal, "x");
+  EXPECT_EQ(at(parser, condition.rightExprIndex).literal, "y");
   EXPECT_TRUE(parser.errors.empty());
 }
 
@@ -581,8 +581,8 @@ TEST(Parser, ParseIfStatementMultipleConsequenceStatements) {
   Expression second =
       at(parser, parser.parserResult.statements[block.statementsIndexes[1]]
                      .expressionIndex);
-  EXPECT_EQ(first.stringValue, "y");
-  EXPECT_EQ(second.stringValue, "z");
+  EXPECT_EQ(first.literal, "y");
+  EXPECT_EQ(second.literal, "z");
 }
 
 TEST(Parser, ParseIfElseStatement) {
@@ -604,7 +604,7 @@ TEST(Parser, ParseIfElseStatement) {
       at(parser, parser.parserResult
                      .statements[consequenceBlock.statementsIndexes[0]]
                      .expressionIndex);
-  EXPECT_EQ(consequenceExpr.stringValue, "y");
+  EXPECT_EQ(consequenceExpr.literal, "y");
 
   ASSERT_GE(statement.alternativeStmtIndex, 0);
   Statement alternativeBlock =
@@ -616,7 +616,7 @@ TEST(Parser, ParseIfElseStatement) {
       at(parser, parser.parserResult
                      .statements[alternativeBlock.statementsIndexes[0]]
                      .expressionIndex);
-  EXPECT_EQ(alternativeExpr.stringValue, "z");
+  EXPECT_EQ(alternativeExpr.literal, "z");
   EXPECT_TRUE(parser.errors.empty());
 }
 
@@ -641,8 +641,8 @@ TEST(Parser, ParseIfElseStatementMultipleAlternativeStatements) {
       at(parser, parser.parserResult
                      .statements[alternativeBlock.statementsIndexes[1]]
                      .expressionIndex);
-  EXPECT_EQ(first.stringValue, "a");
-  EXPECT_EQ(second.stringValue, "b");
+  EXPECT_EQ(first.literal, "a");
+  EXPECT_EQ(second.literal, "b");
 }
 
 TEST(Parser, ParseIfStatementMissingOpenParen) {
@@ -691,7 +691,7 @@ TEST(Parser, ParseIfStatementAsProgramStatement) {
           .statements[parser.parserResult.programStatementsIndexes[1]];
   EXPECT_EQ(static_cast<int>(next.kind),
             static_cast<int>(StatementKind::EXPRESSION));
-  EXPECT_EQ(at(parser, next.expressionIndex).stringValue, "z");
+  EXPECT_EQ(at(parser, next.expressionIndex).literal, "z");
   EXPECT_TRUE(parser.errors.empty());
 }
 
@@ -716,7 +716,7 @@ TEST(Parser, ParseFunctionExpressionNoParams) {
       at(parser,
          parser.parserResult.statements[block.statementsIndexes[0]]
              .expressionIndex);
-  EXPECT_EQ(bodyExpr.stringValue, "x");
+  EXPECT_EQ(bodyExpr.literal, "x");
   EXPECT_TRUE(parser.errors.empty());
 }
 
@@ -768,8 +768,8 @@ TEST(Parser, ParseFunctionExpressionMultipleBodyStatements) {
   Expression second =
       at(parser, parser.parserResult.statements[block.statementsIndexes[1]]
                      .expressionIndex);
-  EXPECT_EQ(first.stringValue, "x");
-  EXPECT_EQ(second.stringValue, "y");
+  EXPECT_EQ(first.literal, "x");
+  EXPECT_EQ(second.literal, "y");
   EXPECT_TRUE(parser.errors.empty());
 }
 
@@ -827,7 +827,7 @@ TEST(Parser, ParseCallExpressionNoArgs) {
       at(parser, parser.parserResult.statements[0].expressionIndex);
   EXPECT_EQ(static_cast<int>(expression.kind),
             static_cast<int>(ExpressionKind::CALL));
-  EXPECT_EQ(expression.funcName, "add");
+  EXPECT_EQ(expression.literal, "add");
   EXPECT_TRUE(expression.paramsIndexes.empty());
   EXPECT_TRUE(parser.errors.empty());
 }
@@ -843,7 +843,7 @@ TEST(Parser, ParseCallExpressionSingleArg) {
       at(parser, parser.parserResult.statements[0].expressionIndex);
   EXPECT_EQ(static_cast<int>(expression.kind),
             static_cast<int>(ExpressionKind::CALL));
-  EXPECT_EQ(expression.funcName, "add");
+  EXPECT_EQ(expression.literal, "add");
   ASSERT_EQ(expression.paramsIndexes.size(), 1u);
   EXPECT_DOUBLE_EQ(at(parser, expression.paramsIndexes[0]).numValue, 1.0);
   EXPECT_TRUE(parser.errors.empty());
@@ -860,7 +860,7 @@ TEST(Parser, ParseCallExpressionMultipleArgs) {
       at(parser, parser.parserResult.statements[0].expressionIndex);
   EXPECT_EQ(static_cast<int>(expression.kind),
             static_cast<int>(ExpressionKind::CALL));
-  EXPECT_EQ(expression.funcName, "add");
+  EXPECT_EQ(expression.literal, "add");
   ASSERT_EQ(expression.paramsIndexes.size(), 3u);
 
   EXPECT_DOUBLE_EQ(at(parser, expression.paramsIndexes[0]).numValue, 1.0);
@@ -922,7 +922,7 @@ TEST(Parser, ParseReturnStatementIdentifier) {
   Expression expression = at(parser, statement.expressionIndex);
   EXPECT_EQ(static_cast<int>(expression.kind),
             static_cast<int>(ExpressionKind::IDENTIFIER));
-  EXPECT_EQ(expression.stringValue, "foobar");
+  EXPECT_EQ(expression.literal, "foobar");
   EXPECT_TRUE(parser.errors.empty());
 }
 

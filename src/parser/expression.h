@@ -41,9 +41,10 @@ struct Expression {
   ExpressionKind kind;
 
   double numValue;
-  std::string stringValue;
   bool boolValue;
-  std::string varName;
+
+  // This is used for variables name, for string values, and for function names
+  std::string literal;
 
   // Binary Expression
   BinaryOperator binaryOperator;
@@ -59,7 +60,6 @@ struct Expression {
   int bodyStmtIndex;
 
   // Call expression
-  std::string funcName;
   std::vector<int> paramsIndexes;
 };
 

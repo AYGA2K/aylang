@@ -168,7 +168,7 @@ int Parser::parseExpression(Precedence precedence) {
 int Parser::parseIdentifier() {
   Expression expression;
   expression.kind = ExpressionKind::IDENTIFIER;
-  expression.stringValue = currentToken().literal;
+  expression.literal = currentToken().literal;
   parserResult.expressions.push_back(expression);
   return static_cast<int>(parserResult.expressions.size()) - 1;
 }
@@ -184,7 +184,7 @@ int Parser::parseNumber() {
 int Parser::parseString() {
   Expression expression;
   expression.kind = ExpressionKind::LITERAL_STRING;
-  expression.stringValue = currentToken().literal;
+  expression.literal = currentToken().literal;
   parserResult.expressions.push_back(expression);
   return static_cast<int>(parserResult.expressions.size()) - 1;
 }
@@ -362,7 +362,7 @@ int Parser::parseCallExpression(int leftExprIndex) {
   }
   Expression expression;
   expression.kind = ExpressionKind::CALL;
-  expression.funcName = parserResult.expressions[leftExprIndex].stringValue;
+  expression.literal = parserResult.expressions[leftExprIndex].literal;
   expression.paramsIndexes = parseCallParams();
   parserResult.expressions.push_back(expression);
   return static_cast<int>(parserResult.expressions.size()) - 1;
