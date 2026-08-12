@@ -3,18 +3,32 @@
 #include "parser/expression.h"
 #include "parser/parser.h"
 #include "value.h"
+#include <memory>
+#include <vector>
 
 struct Evaluator {
   ParserResult parserResult;
-  Environment environment = Environment{};
+  std::shared_ptr<Environment> globalEnv = std::make_shared<Environment>();
   // Returns the value of the last statement.
-  Value evalStatements();
-  Value evalStatement(int index);
-  Value evalExpression(int index);
+  Value evalStatements(size_t fromProgramStatement = 0);
+  Value evalStatement(int index, std::shared_ptr<Environment> env);
+  Value evalExpression(int index, std::shared_ptr<Environment> env);
   Value evalPrefixExpression(UnaryOperator oper, Value &rightValue);
   Value evalInfixExpression(BinaryOperator oper, const Value &leftValue,
                             const Value &rightValue);
-  Value evalIfStatement(int index);
-  Value evalBlockStatement(int index);
-  Value evalVarStatement(int index);
+  Value evalIfStatement(int index, std::shared_ptr<Environment> env);
+  Value evalBlockStatement(int index, std::shared_ptr<Environment> env);
+  Value evalVarStatement(int index, std::shared_ptr<Environment> env);
+  Value evalFunctionExpression(const std::string &name,
+                               const std::vector<std::string> &parameters,
+                               int bodyStmtIndex,
+                               std::shared_ptr<Environment> env);
+
+  std::vector<Value> evalExpressions(const std::vector<int> &argExprIndexes,
+                                     std::shared_ptr<Environment> env);
+  Value evalCallExpression(int functionExprIndex,
+                           const std::vector<int> &argExprIndexes,
+                           std::shared_ptr<Environment> env);
+
+  Value applyFunction(Value &function, std::vector<Value> &args);
 };

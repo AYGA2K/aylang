@@ -14,6 +14,8 @@ std::string inspect(const Value &value) {
   case ValueKind::Null:
     return "null";
     break;
+  case ValueKind::Function:
+    break;
   }
   return "null";
 }
@@ -30,6 +32,9 @@ std::string valueKindToString(ValueKind kind) {
     return "Null";
   case ValueKind::Error:
     return "Error";
+  case ValueKind::Function:
+    return "Function";
+    break;
   }
   return "Unknown";
 }
@@ -44,8 +49,7 @@ double asNumber(const Value &value) {
 }
 
 template <typename T>
-static bool compareOrdered(BinaryOperator oper, const T &left,
-                           const T &right) {
+static bool compareOrdered(BinaryOperator oper, const T &left, const T &right) {
   switch (oper) {
   case BinaryOperator::EQUAL:
     return left == right;
@@ -90,3 +94,5 @@ bool isTruthy(const Value &value) {
   }
   return true;
 }
+
+bool isError(const Value &value) { return value.kind == ValueKind::Error; }

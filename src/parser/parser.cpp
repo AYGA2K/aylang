@@ -362,7 +362,7 @@ int Parser::parseCallExpression(int leftExprIndex) {
   }
   Expression expression;
   expression.kind = ExpressionKind::CALL;
-  expression.literal = parserResult.expressions[leftExprIndex].literal;
+  expression.functionExprIndex = leftExprIndex;
   expression.paramsIndexes = parseCallParams();
   parserResult.expressions.push_back(expression);
   return static_cast<int>(parserResult.expressions.size()) - 1;

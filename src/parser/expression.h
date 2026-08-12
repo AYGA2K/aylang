@@ -60,6 +60,7 @@ struct Expression {
   int bodyStmtIndex;
 
   // Call expression
+  int functionExprIndex = -1;
   std::vector<int> paramsIndexes;
 };
 

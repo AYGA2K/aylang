@@ -827,7 +827,7 @@ TEST(Parser, ParseCallExpressionNoArgs) {
       at(parser, parser.parserResult.statements[0].expressionIndex);
   EXPECT_EQ(static_cast<int>(expression.kind),
             static_cast<int>(ExpressionKind::CALL));
-  EXPECT_EQ(expression.literal, "add");
+  EXPECT_EQ(at(parser, expression.functionExprIndex).literal, "add");
   EXPECT_TRUE(expression.paramsIndexes.empty());
   EXPECT_TRUE(parser.errors.empty());
 }
@@ -843,7 +843,7 @@ TEST(Parser, ParseCallExpressionSingleArg) {
       at(parser, parser.parserResult.statements[0].expressionIndex);
   EXPECT_EQ(static_cast<int>(expression.kind),
             static_cast<int>(ExpressionKind::CALL));
-  EXPECT_EQ(expression.literal, "add");
+  EXPECT_EQ(at(parser, expression.functionExprIndex).literal, "add");
   ASSERT_EQ(expression.paramsIndexes.size(), 1u);
   EXPECT_DOUBLE_EQ(at(parser, expression.paramsIndexes[0]).numValue, 1.0);
   EXPECT_TRUE(parser.errors.empty());
@@ -860,7 +860,7 @@ TEST(Parser, ParseCallExpressionMultipleArgs) {
       at(parser, parser.parserResult.statements[0].expressionIndex);
   EXPECT_EQ(static_cast<int>(expression.kind),
             static_cast<int>(ExpressionKind::CALL));
-  EXPECT_EQ(expression.literal, "add");
+  EXPECT_EQ(at(parser, expression.functionExprIndex).literal, "add");
   ASSERT_EQ(expression.paramsIndexes.size(), 3u);
 
   EXPECT_DOUBLE_EQ(at(parser, expression.paramsIndexes[0]).numValue, 1.0);

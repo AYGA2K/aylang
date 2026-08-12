@@ -612,4 +612,39 @@ TEST(Evaluator, EvalUnboundNameIsNull) {
   EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Null));
 }
 
+TEST(Evaluator, EvalCallExpressionAddsArgs) {
+  Value value = eval("var add = fn(x, y) { x + y; }; add(1, 2);");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.numValue, 3.0);
+}
+
+TEST(Evaluator, EvalCallExpressionMultipleBodyStatementsReturnsLast) {
+  Value value = eval("var f = fn(x) { var y = x + 1; y * 2; }; f(3);");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.numValue, 8.0);
+}
+
+TEST(Evaluator, EvalCallExpressionArgumentsAreLexicallyScoped) {
+  Value value = eval("var x = 10; var f = fn(x) { x; }; f(5); x;");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.numValue, 10.0);
+}
+
+TEST(Evaluator, EvalCallExpressionReturnStopsBodyEarly) {
+  Value value = eval("var f = fn(x) { return x + 1; x + 100; }; f(2);");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.numValue, 3.0);
+}
+
+TEST(Evaluator, EvalCallExpressionArgumentCountMismatchIsError) {
+  Value value = eval("var add = fn(x, y) { x + y; }; add(1);");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "wrong number of arguments: got 1, want 2");
+}
+
 } // namespace
