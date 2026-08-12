@@ -7,6 +7,9 @@
 #include <cstddef>
 #include <vector>
 
+// fromProgramStatement is the index of the next statement to evaluate
+// (how many statements were already evaluated), so we can use one parser
+// instance in the repl.
 Value Evaluator::evalStatements(size_t fromProgramStatement) {
   Value result;
   for (size_t i = fromProgramStatement;
@@ -111,7 +114,6 @@ Value Evaluator::evalInfixExpression(BinaryOperator oper,
   case BinaryOperator::MULTIPLY:
   case BinaryOperator::DIVIDE:
     if (isNumeric(leftValue) && isNumeric(rightValue)) {
-      // A number is true when nonzero.
       double left = asNumber(leftValue);
       double right = asNumber(rightValue);
       if (oper == BinaryOperator::ADD) {
@@ -211,10 +213,13 @@ Evaluator::evalExpressions(const std::vector<int> &argExprIndexes,
   return result;
 }
 
+// We get the function's environment and give the params values from the args
 std::shared_ptr<Environment> extendFunctionEnv(Value &function,
                                                std::vector<Value> &args) {
+  // Using function.env instead of the caller's env is what makes closures work
   auto env = newEnclosedEnvironment(function.env);
   for (size_t i = 0; i < args.size(); i++) {
+    // Map the function parameters to their values from the arguments
     env->set(function.parameters[i], args[i]);
   }
   return env;
