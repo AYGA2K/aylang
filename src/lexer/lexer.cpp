@@ -130,13 +130,18 @@ Token Lexer::nextToken() {
     return Token{.type = TokenType::GreaterThan, .literal = ">"};
   case '"': {
     size_t start = current;
-    while ((std::isalnum(static_cast<unsigned char>(peekChar())) ||
-            peekChar() == '_') &&
-           peekChar() != '"') {
+    while (peekChar() != '"' && peekChar() != '\0') {
+      if (peekChar() == '\n') {
+        line++;
+      }
       current++;
     }
     std::string literal = input.substr(start, current - start);
-    current++; // pass "
+    if (peekChar() == '\0') {
+      // Unterminated string literal.
+      return Token{.type = TokenType::Unknown, .literal = literal};
+    }
+    current++; // pass the closing "
     return Token{.type = TokenType::String, .literal = literal};
   }
   default:

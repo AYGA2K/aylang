@@ -117,6 +117,29 @@ TEST(Lexer, StringLiteralWithUnderscore) {
                               });
 }
 
+TEST(Lexer, StringLiteralWithSpacesAndPunctuation) {
+  expectTokens("\"hello, world!\"", {
+                                        {TokenType::String, "hello, world!"},
+                                    });
+}
+
+TEST(Lexer, StringLiteralConcatenation) {
+  expectTokens("\"a\" + \" \" + \"b\";", {
+                                             {TokenType::String, "a"},
+                                             {TokenType::Plus, "+"},
+                                             {TokenType::String, " "},
+                                             {TokenType::Plus, "+"},
+                                             {TokenType::String, "b"},
+                                             {TokenType::Semicolon, ";"},
+                                         });
+}
+
+TEST(Lexer, UnterminatedStringLiteral) {
+  expectTokens("\"hello", {
+                              {TokenType::Unknown, "hello"},
+                          });
+}
+
 TEST(Lexer, AdjacentStringLiterals) {
   expectTokens("\"foo\" \"bar\"", {
                                       {TokenType::String, "foo"},
