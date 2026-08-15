@@ -6,6 +6,7 @@
 
 #include <gtest/gtest.h>
 
+#include <cstdio>
 #include <string>
 #include <vector>
 
@@ -18,6 +19,20 @@ Value eval(const std::string &input) {
   parser.parse();
   Evaluator evaluator{.parserResult = parser.parserResult};
   return evaluator.evalStatements();
+}
+
+Value evalCapturingOutput(const std::string &input, std::string &output) {
+  testing::internal::CaptureStdout();
+  Value value = eval(input);
+  std::fflush(stdout);
+  output = testing::internal::GetCapturedStdout();
+  return value;
+}
+
+std::string evalOutput(const std::string &input) {
+  std::string output;
+  evalCapturingOutput(input, output);
+  return output;
 }
 
 TEST(Evaluator, EvalNumberInteger) {
@@ -646,6 +661,72 @@ TEST(Evaluator, EvalCallExpressionArgumentCountMismatchIsError) {
 
   EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
   EXPECT_EQ(value.strValue, "wrong number of arguments: got 1, want 2");
+}
+
+TEST(Evaluator, EvalBuiltinPrintString) {
+  EXPECT_EQ(evalOutput("print(\"hello\");"), "hello\n");
+}
+
+TEST(Evaluator, EvalBuiltinPrintNumber) {
+  EXPECT_EQ(evalOutput("print(1 + 2);"), "3\n");
+}
+
+TEST(Evaluator, EvalBuiltinPrintBool) {
+  EXPECT_EQ(evalOutput("print(true);"), "true\n");
+}
+
+TEST(Evaluator, EvalBuiltinPrintNull) {
+  EXPECT_EQ(evalOutput("var x; print(x);"), "null\n");
+}
+
+TEST(Evaluator, EvalBuiltinPrintWithoutArgs) {
+  EXPECT_EQ(evalOutput("print();"), "\n");
+}
+
+TEST(Evaluator, EvalBuiltinPrintConcatenatesArgs) {
+  EXPECT_EQ(evalOutput("print(\"a\", 1, false);"), "a1false\n");
+}
+
+TEST(Evaluator, EvalBuiltinPrintEvaluatesArgs) {
+  EXPECT_EQ(evalOutput("var name = \"ayga\"; print(\"hi \" + name);"),
+            "hi ayga\n");
+}
+
+TEST(Evaluator, EvalBuiltinPrintEveryCallOutputs) {
+  EXPECT_EQ(evalOutput("print(\"a\"); print(\"b\");"), "a\nb\n");
+}
+
+TEST(Evaluator, EvalBuiltinPrintInsideFunctionBody) {
+  EXPECT_EQ(evalOutput("var f = fn(x) { print(x); }; f(7);"), "7\n");
+}
+
+TEST(Evaluator, EvalBuiltinPrintReturnsNull) {
+  std::string output;
+  Value value = evalCapturingOutput("print(\"hello\");", output);
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Null));
+}
+
+TEST(Evaluator, EvalBuiltinPrintArgumentErrorIsReturned) {
+  std::string output;
+  Value value = evalCapturingOutput("print(-true);", output);
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "unknown operator: -Bool");
+  EXPECT_EQ(output, "");
+}
+
+TEST(Evaluator, EvalBuiltinPrintUnboundArgumentIsError) {
+  std::string output;
+  Value value = evalCapturingOutput("print(nope);", output);
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "identifier not found: nope");
+  EXPECT_EQ(output, "");
+}
+
+TEST(Evaluator, EvalBuiltinPrintIsNotShadowedByVar) {
+  EXPECT_EQ(evalOutput("var print = 5; print(\"hello\");"), "hello\n");
 }
 
 } // namespace
