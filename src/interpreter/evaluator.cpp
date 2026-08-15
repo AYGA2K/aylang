@@ -5,7 +5,20 @@
 #include "parser/parser.h"
 #include "parser/statement.h"
 #include <cstddef>
+#include <print>
+#include <string>
 #include <vector>
+
+inline constexpr std::array<std::string, 1> builtinFuncs = {"print"};
+
+bool isBuiltIn(std::string name) {
+  for (std::string builtin : builtinFuncs) {
+    if (builtin == name) {
+      return true;
+    }
+  }
+  return false;
+}
 
 // fromProgramStatement is the index of the next statement to evaluate
 // (how many statements were already evaluated), so we can use one parser
@@ -25,6 +38,10 @@ Value Evaluator::evalStatements(size_t fromProgramStatement) {
 }
 
 Value Evaluator::evalExpression(int index, std::shared_ptr<Environment> env) {
+  // A statement that failed to parse holds no expression
+  if (index == -1) {
+    return Value{.kind = ValueKind::Error, .strValue = "invalid expression"};
+  }
   const Expression &expr = parserResult.expressions[index];
   switch (expr.kind) {
   case ExpressionKind::LITERAL_NUMBER:
@@ -57,6 +74,9 @@ Value Evaluator::evalExpression(int index, std::shared_ptr<Environment> env) {
 }
 
 Value Evaluator::evalStatement(int index, std::shared_ptr<Environment> env) {
+  if (index == -1) {
+    return Value{.kind = ValueKind::Error, .strValue = "invalid statement"};
+  }
   const Statement &stmt = parserResult.statements[index];
   switch (stmt.kind) {
   case StatementKind::BLOCK:
@@ -237,13 +257,39 @@ Value Evaluator::applyFunction(Value &function, std::vector<Value> &args) {
   return evaluted;
 }
 
+Value Evaluator::evaluateBuiltinFuncs(std::string funcName,
+                                      const std::vector<int> &argExprIndexes,
+                                      std::shared_ptr<Environment> env) {
+  if (funcName == "print") {
+    std::vector<Value> args = evalExpressions(argExprIndexes, env);
+    if (args.size() == 1 && isError(args[0])) {
+      return args[0];
+    }
+    std::string printedString;
+    for (const Value &arg : args) {
+      printedString += inspect(arg);
+    }
+    std::println("{}", printedString);
+    return {};
+  }
+  return {};
+}
 Value Evaluator::evalCallExpression(int functionExprIndex,
                                     const std::vector<int> &argExprIndexes,
                                     std::shared_ptr<Environment> env) {
-  Value function =
-      env->get(parserResult.expressions[functionExprIndex].literal);
+  const std::string funcName =
+      parserResult.expressions[functionExprIndex].literal;
+  if (isBuiltIn(funcName)) {
+    return evaluateBuiltinFuncs(funcName, argExprIndexes, env);
+  }
+  Value function = env->get(funcName);
   if (isError(function)) {
     return function;
+  }
+  if (function.kind != ValueKind::Function) {
+    std::string message =
+        funcName + " is not a function: " + valueKindToString(function.kind);
+    return Value{.kind = ValueKind::Error, .strValue = message};
   }
   std::vector<Value> args = evalExpressions(argExprIndexes, env);
   if (args.size() == 1 && isError(args[0])) {

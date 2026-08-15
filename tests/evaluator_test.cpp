@@ -606,10 +606,11 @@ TEST(Evaluator, EvalVarStatementInsideBlockIsVisibleOutside) {
   EXPECT_DOUBLE_EQ(value.numValue, 7.0);
 }
 
-TEST(Evaluator, EvalUnboundNameIsNull) {
+TEST(Evaluator, EvalUnboundNameIsError) {
   Value value = eval("nope;");
 
-  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Null));
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "identifier not found: nope");
 }
 
 TEST(Evaluator, EvalCallExpressionAddsArgs) {

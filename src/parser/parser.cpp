@@ -70,6 +70,7 @@ void Parser::parse() {
 // Returns the index of the parsed statement in parserResult.statements (-1
 // means none).
 int Parser::parseStatement() {
+  size_t statementsBefore = parserResult.statements.size();
   switch (currentToken().type) {
   case TokenType::Var:
     parseVarStatement();
@@ -92,6 +93,10 @@ int Parser::parseStatement() {
     parseExpressionStatement();
     break;
   }
+  // Failed to parse the statement
+  if (statementsBefore == parserResult.statements.size()) {
+    return -1;
+  }
   return static_cast<int>(parserResult.statements.size()) - 1;
 }
 
@@ -101,6 +106,9 @@ void Parser::parseExpressionStatement() {
   statement.expressionIndex = parseExpression(Precedence::LOWEST);
   if (nextTokenIs(TokenType::Semicolon)) {
     current++;
+  }
+  if (statement.expressionIndex == -1) {
+    return;
   }
   parserResult.statements.push_back(statement);
 }
@@ -142,6 +150,9 @@ void Parser::parseReturnStatement() {
   statement.expressionIndex = parseExpression(Precedence::LOWEST);
   if (nextTokenIs(TokenType::Semicolon)) {
     current++;
+  }
+  if (statement.expressionIndex == -1) {
+    return;
   }
   parserResult.statements.push_back(statement);
 }
@@ -292,7 +303,9 @@ int Parser::parseBlockStatement() {
   while (!currentTokenIs(TokenType::RBrace) &&
          !currentTokenIs(TokenType::EndOfFile)) {
     int index = parseStatement();
-    statement.statementsIndexes.push_back(index);
+    if (index != -1) {
+      statement.statementsIndexes.push_back(index);
+    }
     current++;
   }
   if (!currentTokenIs(TokenType::RBrace)) {

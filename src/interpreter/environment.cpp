@@ -6,10 +6,11 @@ Value Environment::get(std::string name) {
   if (store.contains(name)) {
     return store[name];
   }
-  if (outer && outer->get(name).kind != ValueKind::Null) {
+  if (outer) {
     return outer->get(name);
   }
-  return {};
+  return Value{.kind = ValueKind::Error,
+               .strValue = "identifier not found: " + name};
 }
 
 void Environment::set(std::string name, Value value) { store[name] = value; }

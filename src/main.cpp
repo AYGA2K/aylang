@@ -26,9 +26,9 @@ static bool isDeclarationStatement(const ParserResult &parserResult,
     return true;
   }
   return statement.kind == StatementKind::EXPRESSION &&
-        statement.expressionIndex >= 0 &&
-        parserResult.expressions[statement.expressionIndex].kind ==
-            ExpressionKind::FUNCTION;
+         statement.expressionIndex >= 0 &&
+         parserResult.expressions[statement.expressionIndex].kind ==
+             ExpressionKind::FUNCTION;
 }
 
 int main() {
@@ -64,7 +64,9 @@ int main() {
         !programStatementsIndexes.empty() &&
         isDeclarationStatement(evaluator.parserResult,
                                programStatementsIndexes.back());
-    if (!isDeclaration) {
+    // Declarations and statements evaluating to null (like a print call) have
+    // nothing worth echoing back.
+    if (!isDeclaration && result.kind != ValueKind::Null) {
       std::println("{}", inspect(result));
     }
     evaluatedStatements = programStatementsIndexes.size();

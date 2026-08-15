@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-enum class ValueKind { Number, String, Bool, Null, Error, Function };
+enum class ValueKind { Number, String, Bool, Null, Error, Function, BUILTIN };
 struct Environment;
 
 struct Value {
