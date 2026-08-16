@@ -729,4 +729,83 @@ TEST(Evaluator, EvalBuiltinPrintIsNotShadowedByVar) {
   EXPECT_EQ(evalOutput("var print = 5; print(\"hello\");"), "hello\n");
 }
 
+TEST(Evaluator, EvalBuiltinLenString) {
+  EXPECT_EQ(evalOutput("len(\"hello\");"), "5\n");
+}
+
+TEST(Evaluator, EvalBuiltinLenEmptyString) {
+  EXPECT_EQ(evalOutput("len(\"\");"), "0\n");
+}
+
+TEST(Evaluator, EvalBuiltinLenEvaluatesArgs) {
+  EXPECT_EQ(evalOutput("var name = \"ayga\"; len(\"hi \" + name);"), "7\n");
+}
+
+TEST(Evaluator, EvalBuiltinLenIsNotShadowedByVar) {
+  EXPECT_EQ(evalOutput("var len = 5; len(\"abc\");"), "3\n");
+}
+
+TEST(Evaluator, EvalBuiltinLenWithoutArgsIsError) {
+  std::string output;
+  Value value = evalCapturingOutput("len();", output);
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "wrong number of arguments: got 0, want 1");
+  EXPECT_EQ(output, "");
+}
+
+TEST(Evaluator, EvalBuiltinLenTooManyArgsIsError) {
+  std::string output;
+  Value value = evalCapturingOutput("len(\"a\", \"b\");", output);
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "wrong number of arguments: got 2, want 1");
+  EXPECT_EQ(output, "");
+}
+
+TEST(Evaluator, EvalBuiltinLenNumberArgumentIsError) {
+  std::string output;
+  Value value = evalCapturingOutput("len(1);", output);
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "argument to len is not supported: Number");
+  EXPECT_EQ(output, "");
+}
+
+TEST(Evaluator, EvalBuiltinLenBoolArgumentIsError) {
+  std::string output;
+  Value value = evalCapturingOutput("len(true);", output);
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "argument to len is not supported: Bool");
+  EXPECT_EQ(output, "");
+}
+
+TEST(Evaluator, EvalBuiltinLenNullArgumentIsError) {
+  std::string output;
+  Value value = evalCapturingOutput("var x; len(x);", output);
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "argument to len is not supported: Null");
+  EXPECT_EQ(output, "");
+}
+
+TEST(Evaluator, EvalBuiltinLenArgumentErrorIsReturned) {
+  std::string output;
+  Value value = evalCapturingOutput("len(-true);", output);
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "unknown operator: -Bool");
+  EXPECT_EQ(output, "");
+}
+
+TEST(Evaluator, EvalBuiltinLenUnboundArgumentIsError) {
+  std::string output;
+  Value value = evalCapturingOutput("len(nope);", output);
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "identifier not found: nope");
+  EXPECT_EQ(output, "");
+}
+
 } // namespace

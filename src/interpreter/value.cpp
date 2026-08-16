@@ -14,6 +14,7 @@ std::string inspect(const Value &value) {
   case ValueKind::Null:
     return "null";
     break;
+  case ValueKind::BUILTIN:
   case ValueKind::Function:
     break;
   }
@@ -33,6 +34,7 @@ std::string valueKindToString(ValueKind kind) {
   case ValueKind::Error:
     return "Error";
   case ValueKind::Function:
+  case ValueKind::BUILTIN:
     return "Function";
     break;
   }

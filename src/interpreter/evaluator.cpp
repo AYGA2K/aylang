@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-inline constexpr std::array<std::string, 1> builtinFuncs = {"print"};
+inline constexpr std::array<std::string, 2> builtinFuncs = {"print", "len"};
 
 bool isBuiltIn(std::string name) {
   for (std::string builtin : builtinFuncs) {
@@ -271,6 +271,23 @@ Value Evaluator::evaluateBuiltinFuncs(std::string funcName,
     }
     std::println("{}", printedString);
     return {};
+  }
+  if (funcName == "len") {
+    if (argExprIndexes.size() != 1) {
+      std::string message = "wrong number of arguments: got " +
+                            std::to_string(argExprIndexes.size()) + ", want 1";
+      return Value{.kind = ValueKind::Error, .strValue = message};
+    }
+    std::vector<Value> args = evalExpressions(argExprIndexes, env);
+    if (args.size() == 1 && isError(args[0])) {
+      return args[0];
+    }
+    if (args[0].kind != ValueKind::String) {
+      std::string message = "argument to len is not supported: " +
+                            valueKindToString(args[0].kind);
+      return Value{.kind = ValueKind::Error, .strValue = message};
+    }
+    std::println("{}", args[0].strValue.size());
   }
   return {};
 }
