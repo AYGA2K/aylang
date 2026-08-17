@@ -730,19 +730,31 @@ TEST(Evaluator, EvalBuiltinPrintIsNotShadowedByVar) {
 }
 
 TEST(Evaluator, EvalBuiltinLenString) {
-  EXPECT_EQ(evalOutput("len(\"hello\");"), "5\n");
+  Value value = eval("len(\"hello\");");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.numValue, 5.0);
 }
 
 TEST(Evaluator, EvalBuiltinLenEmptyString) {
-  EXPECT_EQ(evalOutput("len(\"\");"), "0\n");
+  Value value = eval("len(\"\");");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.numValue, 0.0);
 }
 
 TEST(Evaluator, EvalBuiltinLenEvaluatesArgs) {
-  EXPECT_EQ(evalOutput("var name = \"ayga\"; len(\"hi \" + name);"), "7\n");
+  Value value = eval("var name = \"ayga\"; len(\"hi \" + name);");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.numValue, 7.0);
 }
 
 TEST(Evaluator, EvalBuiltinLenIsNotShadowedByVar) {
-  EXPECT_EQ(evalOutput("var len = 5; len(\"abc\");"), "3\n");
+  Value value = eval("var len = 5; len(\"abc\");");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.numValue, 3.0);
 }
 
 TEST(Evaluator, EvalBuiltinLenWithoutArgsIsError) {

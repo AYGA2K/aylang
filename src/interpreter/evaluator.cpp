@@ -287,7 +287,8 @@ Value Evaluator::evaluateBuiltinFuncs(std::string funcName,
                             valueKindToString(args[0].kind);
       return Value{.kind = ValueKind::Error, .strValue = message};
     }
-    std::println("{}", args[0].strValue.size());
+    return Value{.kind = ValueKind::Number,
+                 .numValue = static_cast<double>(args[0].strValue.size())};
   }
   return {};
 }
