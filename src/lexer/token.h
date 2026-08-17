@@ -16,6 +16,8 @@ enum class TokenType {
   RParen,
   LBrace,
   RBrace,
+  LBrack,
+  RBrack,
   Comma,
   Semicolon,
   Equal,

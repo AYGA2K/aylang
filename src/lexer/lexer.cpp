@@ -70,6 +70,10 @@ Token Lexer::nextToken() {
     return Token{.type = TokenType::LBrace, .literal = "{"};
   case '}':
     return Token{.type = TokenType::RBrace, .literal = "}"};
+  case '[':
+    return Token{.type = TokenType::LBrack, .literal = "["};
+  case ']':
+    return Token{.type = TokenType::RBrack, .literal = "]"};
   case '+':
     return Token{.type = TokenType::Plus, .literal = "+"};
   case '-':

@@ -601,9 +601,9 @@ TEST(Parser, ParseIfElseStatement) {
       parser.parserResult.statements[statement.consequenceStmtIndex];
   ASSERT_EQ(consequenceBlock.statementsIndexes.size(), 1u);
   Expression consequenceExpr =
-      at(parser, parser.parserResult
-                     .statements[consequenceBlock.statementsIndexes[0]]
-                     .expressionIndex);
+      at(parser,
+         parser.parserResult.statements[consequenceBlock.statementsIndexes[0]]
+             .expressionIndex);
   EXPECT_EQ(consequenceExpr.literal, "y");
 
   ASSERT_GE(statement.alternativeStmtIndex, 0);
@@ -613,9 +613,9 @@ TEST(Parser, ParseIfElseStatement) {
             static_cast<int>(StatementKind::BLOCK));
   ASSERT_EQ(alternativeBlock.statementsIndexes.size(), 1u);
   Expression alternativeExpr =
-      at(parser, parser.parserResult
-                     .statements[alternativeBlock.statementsIndexes[0]]
-                     .expressionIndex);
+      at(parser,
+         parser.parserResult.statements[alternativeBlock.statementsIndexes[0]]
+             .expressionIndex);
   EXPECT_EQ(alternativeExpr.literal, "z");
   EXPECT_TRUE(parser.errors.empty());
 }
@@ -634,13 +634,13 @@ TEST(Parser, ParseIfElseStatementMultipleAlternativeStatements) {
   ASSERT_EQ(alternativeBlock.statementsIndexes.size(), 2u);
 
   Expression first =
-      at(parser, parser.parserResult
-                     .statements[alternativeBlock.statementsIndexes[0]]
-                     .expressionIndex);
+      at(parser,
+         parser.parserResult.statements[alternativeBlock.statementsIndexes[0]]
+             .expressionIndex);
   Expression second =
-      at(parser, parser.parserResult
-                     .statements[alternativeBlock.statementsIndexes[1]]
-                     .expressionIndex);
+      at(parser,
+         parser.parserResult.statements[alternativeBlock.statementsIndexes[1]]
+             .expressionIndex);
   EXPECT_EQ(first.literal, "a");
   EXPECT_EQ(second.literal, "b");
 }
@@ -713,9 +713,8 @@ TEST(Parser, ParseFunctionExpressionNoParams) {
             static_cast<int>(StatementKind::BLOCK));
   ASSERT_EQ(block.statementsIndexes.size(), 1u);
   Expression bodyExpr =
-      at(parser,
-         parser.parserResult.statements[block.statementsIndexes[0]]
-             .expressionIndex);
+      at(parser, parser.parserResult.statements[block.statementsIndexes[0]]
+                     .expressionIndex);
   EXPECT_EQ(bodyExpr.literal, "x");
   EXPECT_TRUE(parser.errors.empty());
 }
@@ -828,7 +827,7 @@ TEST(Parser, ParseCallExpressionNoArgs) {
   EXPECT_EQ(static_cast<int>(expression.kind),
             static_cast<int>(ExpressionKind::CALL));
   EXPECT_EQ(at(parser, expression.functionExprIndex).literal, "add");
-  EXPECT_TRUE(expression.paramsIndexes.empty());
+  EXPECT_TRUE(expression.expressionsIndexes.empty());
   EXPECT_TRUE(parser.errors.empty());
 }
 
@@ -844,8 +843,8 @@ TEST(Parser, ParseCallExpressionSingleArg) {
   EXPECT_EQ(static_cast<int>(expression.kind),
             static_cast<int>(ExpressionKind::CALL));
   EXPECT_EQ(at(parser, expression.functionExprIndex).literal, "add");
-  ASSERT_EQ(expression.paramsIndexes.size(), 1u);
-  EXPECT_DOUBLE_EQ(at(parser, expression.paramsIndexes[0]).numValue, 1.0);
+  ASSERT_EQ(expression.expressionsIndexes.size(), 1u);
+  EXPECT_DOUBLE_EQ(at(parser, expression.expressionsIndexes[0]).numValue, 1.0);
   EXPECT_TRUE(parser.errors.empty());
 }
 
@@ -861,17 +860,17 @@ TEST(Parser, ParseCallExpressionMultipleArgs) {
   EXPECT_EQ(static_cast<int>(expression.kind),
             static_cast<int>(ExpressionKind::CALL));
   EXPECT_EQ(at(parser, expression.functionExprIndex).literal, "add");
-  ASSERT_EQ(expression.paramsIndexes.size(), 3u);
+  ASSERT_EQ(expression.expressionsIndexes.size(), 3u);
 
-  EXPECT_DOUBLE_EQ(at(parser, expression.paramsIndexes[0]).numValue, 1.0);
+  EXPECT_DOUBLE_EQ(at(parser, expression.expressionsIndexes[0]).numValue, 1.0);
 
-  Expression second = at(parser, expression.paramsIndexes[1]);
+  Expression second = at(parser, expression.expressionsIndexes[1]);
   EXPECT_EQ(static_cast<int>(second.kind),
             static_cast<int>(ExpressionKind::BINARY));
   EXPECT_EQ(static_cast<int>(second.binaryOperator),
             static_cast<int>(BinaryOperator::MULTIPLY));
 
-  Expression third = at(parser, expression.paramsIndexes[2]);
+  Expression third = at(parser, expression.expressionsIndexes[2]);
   EXPECT_EQ(static_cast<int>(third.kind),
             static_cast<int>(ExpressionKind::BINARY));
   EXPECT_EQ(static_cast<int>(third.binaryOperator),
@@ -954,6 +953,76 @@ TEST(Parser, ParseReturnStatementConsumesSemicolon) {
   parser.parseReturnStatement();
 
   EXPECT_TRUE(parser.currentTokenIs(TokenType::Semicolon));
+}
+
+TEST(Parser, ParseArrayEmpty) {
+  std::vector<Token> tokens = tokenize("[];");
+  Parser parser{tokens};
+
+  parser.parseExpressionStatement();
+
+  ASSERT_FALSE(parser.parserResult.statements.empty());
+  Expression expression =
+      at(parser, parser.parserResult.statements[0].expressionIndex);
+  EXPECT_EQ(static_cast<int>(expression.kind),
+            static_cast<int>(ExpressionKind::LITERAL_ARRAY));
+  EXPECT_TRUE(expression.expressionsIndexes.empty());
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseArraySingleValue) {
+  std::vector<Token> tokens = tokenize("[1];");
+  Parser parser{tokens};
+
+  parser.parseExpressionStatement();
+
+  ASSERT_FALSE(parser.parserResult.statements.empty());
+  Expression expression =
+      at(parser, parser.parserResult.statements[0].expressionIndex);
+  EXPECT_EQ(static_cast<int>(expression.kind),
+            static_cast<int>(ExpressionKind::LITERAL_ARRAY));
+  ASSERT_EQ(expression.expressionsIndexes.size(), 1u);
+  EXPECT_DOUBLE_EQ(at(parser, expression.expressionsIndexes[0]).numValue, 1.0);
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseArrayMultipleValues) {
+  std::vector<Token> tokens = tokenize("[1, 2 * 3, \"a\"];");
+  Parser parser{tokens};
+
+  parser.parseExpressionStatement();
+
+  ASSERT_FALSE(parser.parserResult.statements.empty());
+  Expression expression =
+      at(parser, parser.parserResult.statements[0].expressionIndex);
+  EXPECT_EQ(static_cast<int>(expression.kind),
+            static_cast<int>(ExpressionKind::LITERAL_ARRAY));
+  ASSERT_EQ(expression.expressionsIndexes.size(), 3u);
+
+  EXPECT_DOUBLE_EQ(at(parser, expression.expressionsIndexes[0]).numValue, 1.0);
+
+  Expression second = at(parser, expression.expressionsIndexes[1]);
+  EXPECT_EQ(static_cast<int>(second.kind),
+            static_cast<int>(ExpressionKind::BINARY));
+  EXPECT_EQ(static_cast<int>(second.binaryOperator),
+            static_cast<int>(BinaryOperator::MULTIPLY));
+
+  Expression third = at(parser, expression.expressionsIndexes[2]);
+  EXPECT_EQ(static_cast<int>(third.kind),
+            static_cast<int>(ExpressionKind::LITERAL_STRING));
+  EXPECT_EQ(third.literal, "a");
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseArrayMissingCloseBracket) {
+  std::vector<Token> tokens = tokenize("[1, 2;");
+  Parser parser{tokens};
+
+  parser.parseExpressionStatement();
+
+  ASSERT_FALSE(parser.errors.empty());
+  EXPECT_EQ(parser.errors[0],
+            "Expected next token to be RBrack, got Semicolon");
 }
 
 } // namespace

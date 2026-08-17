@@ -77,6 +77,51 @@ TEST(Evaluator, EvalEmptyStringLiteral) {
   EXPECT_EQ(value.strValue, "");
 }
 
+TEST(Evaluator, EvalArrayLiteralEmpty) {
+  Value value = eval("[];");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Array));
+  EXPECT_TRUE(value.values.empty());
+}
+
+TEST(Evaluator, EvalArrayLiteralWithValues) {
+  Value value = eval("[1, \"a\", true];");
+
+  ASSERT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Array));
+  ASSERT_EQ(value.values.size(), 3u);
+
+  EXPECT_EQ(static_cast<int>(value.values[0]->kind),
+            static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.values[0]->numValue, 1.0);
+
+  EXPECT_EQ(static_cast<int>(value.values[1]->kind),
+            static_cast<int>(ValueKind::String));
+  EXPECT_EQ(value.values[1]->strValue, "a");
+
+  EXPECT_EQ(static_cast<int>(value.values[2]->kind),
+            static_cast<int>(ValueKind::Bool));
+  EXPECT_TRUE(value.values[2]->boolValue);
+}
+
+TEST(Evaluator, EvalArrayLiteralEvaluatesElements) {
+  Value value = eval("[1 + 2, 3 * 4];");
+
+  ASSERT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Array));
+  ASSERT_EQ(value.values.size(), 2u);
+  EXPECT_DOUBLE_EQ(value.values[0]->numValue, 3.0);
+  EXPECT_DOUBLE_EQ(value.values[1]->numValue, 12.0);
+}
+
+TEST(Evaluator, EvalArrayLiteralStoredInVar) {
+  Value value = eval("var arr = [1, 2, 3]; arr;");
+
+  ASSERT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Array));
+  ASSERT_EQ(value.values.size(), 3u);
+  EXPECT_DOUBLE_EQ(value.values[0]->numValue, 1.0);
+  EXPECT_DOUBLE_EQ(value.values[1]->numValue, 2.0);
+  EXPECT_DOUBLE_EQ(value.values[2]->numValue, 3.0);
+}
+
 TEST(Evaluator, EvalLastStatement) {
   Value value = eval("1; 2; 3;");
 
@@ -504,6 +549,56 @@ TEST(Evaluator, EvalStringSubtractIsError) {
   EXPECT_EQ(value.strValue, "unknown operator: Str - Str");
 }
 
+TEST(Evaluator, EvalArrayAddConcatenates) {
+  Value value = eval("[1, 2] + [3, 4];");
+
+  ASSERT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Array));
+  ASSERT_EQ(value.values.size(), 4u);
+  EXPECT_DOUBLE_EQ(value.values[0]->numValue, 1.0);
+  EXPECT_DOUBLE_EQ(value.values[1]->numValue, 2.0);
+  EXPECT_DOUBLE_EQ(value.values[2]->numValue, 3.0);
+  EXPECT_DOUBLE_EQ(value.values[3]->numValue, 4.0);
+}
+
+TEST(Evaluator, EvalArrayAddEmptyArrays) {
+  Value value = eval("[] + [];");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Array));
+  EXPECT_TRUE(value.values.empty());
+}
+
+TEST(Evaluator, EvalArrayAddWithEmptyArray) {
+  Value value = eval("[1] + [];");
+
+  ASSERT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Array));
+  ASSERT_EQ(value.values.size(), 1u);
+  EXPECT_DOUBLE_EQ(value.values[0]->numValue, 1.0);
+}
+
+TEST(Evaluator, EvalArrayAddPreservesOrder) {
+  Value value = eval("[\"a\", \"b\"] + [\"c\"];");
+
+  ASSERT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Array));
+  ASSERT_EQ(value.values.size(), 3u);
+  EXPECT_EQ(value.values[0]->strValue, "a");
+  EXPECT_EQ(value.values[1]->strValue, "b");
+  EXPECT_EQ(value.values[2]->strValue, "c");
+}
+
+TEST(Evaluator, EvalArraySubtractIsError) {
+  Value value = eval("[1] - [2];");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "unknown operator: Array - Array");
+}
+
+TEST(Evaluator, EvalArrayAddNumberIsError) {
+  Value value = eval("[1] + 2;");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "unknown operator: Array + Number");
+}
+
 TEST(Evaluator, EvalErrorStopsFollowingStatements) {
   Value value = eval("-true; 5;");
 
@@ -727,6 +822,22 @@ TEST(Evaluator, EvalBuiltinPrintUnboundArgumentIsError) {
 
 TEST(Evaluator, EvalBuiltinPrintIsNotShadowedByVar) {
   EXPECT_EQ(evalOutput("var print = 5; print(\"hello\");"), "hello\n");
+}
+
+TEST(Evaluator, EvalBuiltinPrintEmptyArray) {
+  EXPECT_EQ(evalOutput("print([]);"), "[]\n");
+}
+
+TEST(Evaluator, EvalBuiltinPrintArrayOfNumbers) {
+  EXPECT_EQ(evalOutput("print([1, 2, 3]);"), "[1,2,3]\n");
+}
+
+TEST(Evaluator, EvalBuiltinPrintArrayOfStrings) {
+  EXPECT_EQ(evalOutput("print([\"a\", \"b\"]);"), "[a,b]\n");
+}
+
+TEST(Evaluator, EvalBuiltinPrintArrayOfBooleans) {
+  EXPECT_EQ(evalOutput("print([true, false]);"), "[true,false]\n");
 }
 
 TEST(Evaluator, EvalBuiltinLenString) {

@@ -8,6 +8,7 @@ enum class ExpressionKind {
   LITERAL_NUMBER,
   LITERAL_STRING,
   LITERAL_BOOL,
+  LITERAL_ARRAY,
   BINARY,
   UNARY,
   STAR,
@@ -61,7 +62,8 @@ struct Expression {
 
   // Call expression
   int functionExprIndex = -1;
-  std::vector<int> paramsIndexes;
+  // params for functions and values for arrays
+  std::vector<int> expressionsIndexes;
 };
 
 std::string unaryOperatorToString(UnaryOperator oper);

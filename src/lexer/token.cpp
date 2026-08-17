@@ -29,6 +29,10 @@ std::string tokenTypeToString(TokenType type) {
     return "LBrace";
   case TokenType::RBrace:
     return "RBrace";
+  case TokenType::LBrack:
+    return "LBrack";
+  case TokenType::RBrack:
+    return "RBrack";
   case TokenType::Comma:
     return "Comma";
   case TokenType::Semicolon:

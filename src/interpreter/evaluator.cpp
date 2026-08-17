@@ -5,6 +5,7 @@
 #include "parser/parser.h"
 #include "parser/statement.h"
 #include <cstddef>
+#include <memory>
 #include <print>
 #include <string>
 #include <vector>
@@ -66,8 +67,12 @@ Value Evaluator::evalExpression(int index, std::shared_ptr<Environment> env) {
     return evalFunctionExpression(expr.literal, expr.parameters,
                                   expr.bodyStmtIndex, env);
   case ExpressionKind::CALL:
-    return evalCallExpression(expr.functionExprIndex, expr.paramsIndexes, env);
+    return evalCallExpression(expr.functionExprIndex, expr.expressionsIndexes,
+                              env);
+  case ExpressionKind::LITERAL_ARRAY:
+    return evalArray(index, env);
   case ExpressionKind::STAR:
+    break;
     break;
   }
   return {};
@@ -156,6 +161,14 @@ Value Evaluator::evalInfixExpression(BinaryOperator oper,
         rightValue.kind == ValueKind::String) {
       return Value{.kind = ValueKind::String,
                    .strValue = leftValue.strValue + rightValue.strValue};
+    }
+
+    if (oper == BinaryOperator::ADD && leftValue.kind == ValueKind::Array &&
+        rightValue.kind == ValueKind::Array) {
+      auto values = leftValue.values;
+      values.insert(values.end(), rightValue.values.begin(),
+                    rightValue.values.end());
+      return Value{.kind = ValueKind::Array, .values = values};
     }
     break;
   }
@@ -314,4 +327,13 @@ Value Evaluator::evalCallExpression(int functionExprIndex,
     return args[0];
   }
   return applyFunction(function, args);
+}
+
+Value Evaluator::evalArray(int index, std::shared_ptr<Environment> env) {
+  Expression expr = parserResult.expressions[index];
+  Value value{.kind = ValueKind::Array};
+  for (int indx : expr.expressionsIndexes) {
+    value.values.push_back(std::make_shared<Value>(evalExpression(indx, env)));
+  }
+  return value;
 }

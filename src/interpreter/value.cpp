@@ -2,6 +2,17 @@
 #include <format>
 #include <string>
 
+static std::string buildArrString(const Value &value) {
+  std::string format = "[";
+  for (size_t i = 0; i < value.values.size(); i++) {
+    if (i > 0) {
+      format += ",";
+    }
+    format += inspect(*value.values[i]);
+  }
+  format += "]";
+  return format;
+}
 std::string inspect(const Value &value) {
   switch (value.kind) {
   case ValueKind::Number:
@@ -13,7 +24,8 @@ std::string inspect(const Value &value) {
     return value.boolValue ? "true" : "false";
   case ValueKind::Null:
     return "null";
-    break;
+  case ValueKind::Array:
+    return buildArrString(value);
   case ValueKind::BUILTIN:
   case ValueKind::Function:
     break;
@@ -36,7 +48,8 @@ std::string valueKindToString(ValueKind kind) {
   case ValueKind::Function:
   case ValueKind::BUILTIN:
     return "Function";
-    break;
+  case ValueKind::Array:
+    return "Array";
   }
   return "Unknown";
 }

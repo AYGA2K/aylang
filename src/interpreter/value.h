@@ -4,7 +4,16 @@
 #include <string>
 #include <vector>
 
-enum class ValueKind { Number, String, Bool, Null, Error, Function, BUILTIN };
+enum class ValueKind {
+  Number,
+  String,
+  Bool,
+  Null,
+  Error,
+  Function,
+  BUILTIN,
+  Array
+};
 struct Environment;
 
 struct Value {
@@ -16,6 +25,9 @@ struct Value {
   std::vector<std::string> parameters = std::vector<std::string>();
   int bodyStmtIndex = -1;
   std::shared_ptr<Environment> env = nullptr;
+  // Array
+  std::vector<std::shared_ptr<Value>> values =
+      std::vector<std::shared_ptr<Value>>();
 };
 
 std::string inspect(const Value &value);

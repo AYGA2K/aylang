@@ -376,7 +376,7 @@ int Parser::parseCallExpression(int leftExprIndex) {
   Expression expression;
   expression.kind = ExpressionKind::CALL;
   expression.functionExprIndex = leftExprIndex;
-  expression.paramsIndexes = parseCallParams();
+  expression.expressionsIndexes = parseCallParams();
   parserResult.expressions.push_back(expression);
   return static_cast<int>(parserResult.expressions.size()) - 1;
 }
@@ -401,6 +401,35 @@ std::vector<int> Parser::parseCallParams() {
   }
   current++; // move to ")"
   return params;
+}
+
+int Parser::parseArray() {
+  Expression expression;
+  expression.kind = ExpressionKind::LITERAL_ARRAY;
+  expression.expressionsIndexes = parseArrayValues();
+  parserResult.expressions.push_back(expression);
+  return static_cast<int>(parserResult.expressions.size()) - 1;
+}
+
+std::vector<int> Parser::parseArrayValues() {
+  std::vector<int> values;
+  current++; // move past "["
+  // empty array => "[]"
+  if (currentTokenIs(TokenType::RBrack)) {
+    return values;
+  }
+  values.push_back(parseExpression(Precedence::LOWEST));
+  while (nextTokenIs(TokenType::Comma)) {
+    current += 2; // move past the current value and the comma
+    values.push_back(parseExpression(Precedence::LOWEST));
+  }
+
+  if (!nextTokenIs(TokenType::RBrack)) {
+    errors.push_back(expectedTokenError(TokenType::RBrack, nextToken().type));
+    return values;
+  }
+  current++; // move to "]"
+  return values;
 }
 
 std::string expectedTokenError(TokenType expected, TokenType got) {

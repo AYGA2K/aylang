@@ -34,4 +34,5 @@ struct Evaluator {
   Value evaluateBuiltinFuncs(std::string funcName,
                              const std::vector<int> &argExprIndexes,
                              std::shared_ptr<Environment> env);
+  Value evalArray(int index, std::shared_ptr<Environment> env);
 };
