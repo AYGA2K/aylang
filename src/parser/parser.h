@@ -15,7 +15,8 @@ enum class Precedence {
   SUM,         // +
   PRODUCT,     // *
   UNARY,       // -X or !X
-  CALL         // myFunction(X)
+  CALL,        // myFunction(X)
+  INDEX        // array[index]
 };
 
 // Expression parse functions store their node in ParserResult.expressions and
@@ -75,6 +76,10 @@ struct Parser {
     registerInfix(TokenType::LParen, [this](int leftExprIndex) {
       return parseCallExpression(leftExprIndex);
     });
+
+    registerInfix(TokenType::LBrack, [this](int leftExprIndex) {
+      return parseIndexExpression(leftExprIndex);
+    });
   }
   Token currentToken();
   Token nextToken();
@@ -95,6 +100,7 @@ struct Parser {
   int parseBinary(int leftExprIndex);
   int parseBoolean();
   int parseGroupedExpression();
+  int parseIndexExpression(int leftExprIndex);
   int parseIfStatement();
   int parseBlockStatement();
   int parseFunction();

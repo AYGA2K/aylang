@@ -17,6 +17,7 @@ std::unordered_map<TokenType, Precedence> precedences{
     {TokenType::Slash, Precedence::PRODUCT},
     {TokenType::Star, Precedence::PRODUCT},
     {TokenType::LParen, Precedence::CALL},
+    {TokenType::LBrack, Precedence::INDEX},
 };
 
 bool Parser::currentTokenIs(TokenType type) {
@@ -401,6 +402,34 @@ std::vector<int> Parser::parseCallParams() {
   }
   current++; // move to ")"
   return params;
+}
+
+int Parser::parseIndexExpression(int leftExprIndex) {
+  if (leftExprIndex < 0) {
+    errors.push_back("Expected an expression before the index brackets");
+    return -1;
+  }
+  Expression literalExpr = parserResult.expressions[leftExprIndex];
+  if (literalExpr.kind != ExpressionKind::IDENTIFIER) {
+    errors.push_back("Expected an identifier before the index brackets");
+    return -1;
+  }
+  Expression expression;
+  expression.kind = ExpressionKind::INDEX;
+  expression.literal = literalExpr.literal;
+  current++; // move past "["
+  int indexExpr = parseExpression(Precedence::LOWEST);
+  if (indexExpr == -1) {
+    return -1;
+  }
+  if (!nextTokenIs(TokenType::RBrack)) {
+    errors.push_back(expectedTokenError(TokenType::RBrack, nextToken().type));
+    return -1;
+  }
+  current++; // move to "]"
+  expression.operandExprIndex = indexExpr;
+  parserResult.expressions.push_back(expression);
+  return static_cast<int>(parserResult.expressions.size()) - 1;
 }
 
 int Parser::parseArray() {

@@ -61,8 +61,9 @@ Value Evaluator::evalExpression(int index, std::shared_ptr<Environment> env) {
   case ExpressionKind::LITERAL_STRING:
     return Value{.kind = ValueKind::String, .strValue = expr.literal};
 
-  case ExpressionKind::IDENTIFIER:
+  case ExpressionKind::IDENTIFIER: {
     return env->get(expr.literal);
+  }
   case ExpressionKind::FUNCTION:
     return evalFunctionExpression(expr.literal, expr.parameters,
                                   expr.bodyStmtIndex, env);
@@ -72,7 +73,6 @@ Value Evaluator::evalExpression(int index, std::shared_ptr<Environment> env) {
   case ExpressionKind::LITERAL_ARRAY:
     return evalArray(index, env);
   case ExpressionKind::STAR:
-    break;
     break;
   }
   return {};

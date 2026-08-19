@@ -1025,4 +1025,62 @@ TEST(Parser, ParseArrayMissingCloseBracket) {
             "Expected next token to be RBrack, got Semicolon");
 }
 
+TEST(Parser, ParseIndexExpression) {
+  std::vector<Token> tokens = tokenize("arr[1];");
+  Parser parser{tokens};
+
+  parser.parseExpressionStatement();
+
+  ASSERT_FALSE(parser.parserResult.statements.empty());
+  Expression expression =
+      at(parser, parser.parserResult.statements[0].expressionIndex);
+  EXPECT_EQ(static_cast<int>(expression.kind),
+            static_cast<int>(ExpressionKind::INDEX));
+  EXPECT_EQ(expression.literal, "arr");
+  EXPECT_DOUBLE_EQ(at(parser, expression.operandExprIndex).numValue, 1.0);
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseIndexExpressionOnNonIdentifierIsError) {
+  std::vector<Token> tokens = tokenize("5[1];");
+  Parser parser{tokens};
+
+  parser.parseExpressionStatement();
+
+  ASSERT_FALSE(parser.errors.empty());
+  EXPECT_EQ(parser.errors[0],
+            "Expected an identifier before the index brackets");
+}
+
+TEST(Parser, ParseIndexExpressionWithBinaryIndex) {
+  std::vector<Token> tokens = tokenize("arr[1 + 2];");
+  Parser parser{tokens};
+
+  parser.parseExpressionStatement();
+
+  ASSERT_FALSE(parser.parserResult.statements.empty());
+  Expression expression =
+      at(parser, parser.parserResult.statements[0].expressionIndex);
+  EXPECT_EQ(static_cast<int>(expression.kind),
+            static_cast<int>(ExpressionKind::INDEX));
+  EXPECT_EQ(expression.literal, "arr");
+  Expression indexExpr = at(parser, expression.operandExprIndex);
+  EXPECT_EQ(static_cast<int>(indexExpr.kind),
+            static_cast<int>(ExpressionKind::BINARY));
+  EXPECT_EQ(static_cast<int>(indexExpr.binaryOperator),
+            static_cast<int>(BinaryOperator::ADD));
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseIndexExpressionMissingCloseBracket) {
+  std::vector<Token> tokens = tokenize("arr[1;");
+  Parser parser{tokens};
+
+  parser.parseExpressionStatement();
+
+  ASSERT_FALSE(parser.errors.empty());
+  EXPECT_EQ(parser.errors[0],
+            "Expected next token to be RBrack, got Semicolon");
+}
+
 } // namespace
