@@ -101,11 +101,11 @@ Value Evaluator::evalStatement(int index, std::shared_ptr<Environment> env) {
 }
 
 Value Evaluator::evalPrefixExpression(UnaryOperator oper, Value &value) {
-  if (oper == UnaryOperator::NEGATE && value.kind == ValueKind::Number) {
+  if (oper == UnaryOperator::NEGATE && isNumber(value)) {
     value.numValue = -value.numValue;
     return value;
   }
-  if (oper == UnaryOperator::NOT && value.kind == ValueKind::Bool) {
+  if (oper == UnaryOperator::NOT && isBool(value)) {
     value.boolValue = !value.boolValue;
     return value;
   }
@@ -159,14 +159,14 @@ Value Evaluator::evalInfixExpression(BinaryOperator oper,
         return Value{.kind = ValueKind::Number, .numValue = left / right};
       }
     }
-    if (oper == BinaryOperator::ADD && leftValue.kind == ValueKind::String &&
-        rightValue.kind == ValueKind::String) {
+    if (oper == BinaryOperator::ADD && isString(leftValue) &&
+        isString(rightValue)) {
       return Value{.kind = ValueKind::String,
                    .strValue = leftValue.strValue + rightValue.strValue};
     }
 
-    if (oper == BinaryOperator::ADD && leftValue.kind == ValueKind::Array &&
-        rightValue.kind == ValueKind::Array) {
+    if (oper == BinaryOperator::ADD && isArray(leftValue) &&
+        isArray(rightValue)) {
       auto values = leftValue.values;
       values.insert(values.end(), rightValue.values.begin(),
                     rightValue.values.end());
@@ -297,13 +297,17 @@ Value Evaluator::evaluateBuiltinFuncs(std::string funcName,
     if (args.size() == 1 && isError(args[0])) {
       return args[0];
     }
-    if (args[0].kind != ValueKind::String) {
+    if (!isString(args[0]) && !isArray(args[0])) {
       std::string message = "argument to len is not supported: " +
                             valueKindToString(args[0].kind);
       return Value{.kind = ValueKind::Error, .strValue = message};
     }
+    if (isString(args[0])) {
+      return Value{.kind = ValueKind::Number,
+                   .numValue = static_cast<double>(args[0].strValue.size())};
+    }
     return Value{.kind = ValueKind::Number,
-                 .numValue = static_cast<double>(args[0].strValue.size())};
+                 .numValue = static_cast<double>(args[0].values.size())};
   }
   return {};
 }
@@ -319,7 +323,7 @@ Value Evaluator::evalCallExpression(int functionExprIndex,
   if (isError(function)) {
     return function;
   }
-  if (function.kind != ValueKind::Function) {
+  if (!isFunction(function)) {
     std::string message =
         funcName + " is not a function: " + valueKindToString(function.kind);
     return Value{.kind = ValueKind::Error, .strValue = message};
@@ -346,7 +350,7 @@ Value Evaluator::evalArrayIndex(int index, std::shared_ptr<Environment> env) {
   if (isError(indexValue)) {
     return indexValue;
   }
-  if (indexValue.kind != ValueKind::Number) {
+  if (!isNumber(indexValue)) {
     return Value{.kind = ValueKind::Error,
                  .strValue = "index must be a number"};
   }
@@ -356,7 +360,7 @@ Value Evaluator::evalArrayIndex(int index, std::shared_ptr<Environment> env) {
   }
   size_t arrIndex = indexValue.numValue;
   Value array = env->get(indexexpr.literal);
-  if (array.kind != ValueKind::Array) {
+  if (!isArray(array)) {
     return Value{.kind = ValueKind::Error,
                  .strValue = "variable is not an array"};
   }

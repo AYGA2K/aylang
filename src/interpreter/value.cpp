@@ -91,23 +91,37 @@ bool compare(BinaryOperator oper, const Value &leftValue,
   if (leftValue.kind != rightValue.kind) {
     return false;
   }
-  if (leftValue.kind == ValueKind::String) {
+  if (isString(leftValue)) {
     return compareOrdered(oper, leftValue.strValue, rightValue.strValue);
   }
-  if (leftValue.kind == ValueKind::Null) {
+  if (isNull(leftValue)) {
     return true;
   }
   return false;
 }
 
 bool isTruthy(const Value &value) {
-  if (value.kind == ValueKind::Null) {
+  if (isNull(value)) {
     return false;
   }
-  if (value.kind == ValueKind::Bool && !value.boolValue) {
+  if (isBool(value) && !value.boolValue) {
     return false;
   }
   return true;
 }
 
 bool isError(const Value &value) { return value.kind == ValueKind::Error; }
+
+bool isNumber(const Value &value) { return value.kind == ValueKind::Number; }
+
+bool isString(const Value &value) { return value.kind == ValueKind::String; }
+
+bool isBool(const Value &value) { return value.kind == ValueKind::Bool; }
+
+bool isNull(const Value &value) { return value.kind == ValueKind::Null; }
+
+bool isArray(const Value &value) { return value.kind == ValueKind::Array; }
+
+bool isFunction(const Value &value) {
+  return value.kind == ValueKind::Function;
+}

@@ -38,3 +38,9 @@ bool compare(BinaryOperator oper, const Value &leftValue,
              const Value &rightValue);
 bool isTruthy(const Value &value);
 bool isError(const Value &value);
+bool isNumber(const Value &value);
+bool isString(const Value &value);
+bool isBool(const Value &value);
+bool isNull(const Value &value);
+bool isArray(const Value &value);
+bool isFunction(const Value &value);
