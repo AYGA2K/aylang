@@ -987,4 +987,91 @@ TEST(Evaluator, EvalBuiltinLenUnboundArgumentIsError) {
   EXPECT_EQ(output, "");
 }
 
+TEST(Evaluator, EvalBuiltinPushReturnsPushedValue) {
+  Value value = eval("var arr = [1]; push(arr, 2);");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.numValue, 2.0);
+}
+
+TEST(Evaluator, EvalBuiltinPushAppendsToArray) {
+  Value value = eval("var arr = [1, 2]; push(arr, 3); arr;");
+
+  ASSERT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Array));
+  ASSERT_EQ(value.values.size(), 3u);
+  EXPECT_DOUBLE_EQ(value.values[0]->numValue, 1.0);
+  EXPECT_DOUBLE_EQ(value.values[1]->numValue, 2.0);
+  EXPECT_DOUBLE_EQ(value.values[2]->numValue, 3.0);
+}
+
+TEST(Evaluator, EvalBuiltinPushOnEmptyArray) {
+  Value value = eval("var arr = []; push(arr, 1); arr;");
+
+  ASSERT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Array));
+  ASSERT_EQ(value.values.size(), 1u);
+  EXPECT_DOUBLE_EQ(value.values[0]->numValue, 1.0);
+}
+
+TEST(Evaluator, EvalBuiltinPushEvaluatesSecondArgument) {
+  Value value = eval("var arr = []; push(arr, 1 + 2); arr;");
+
+  ASSERT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Array));
+  ASSERT_EQ(value.values.size(), 1u);
+  EXPECT_DOUBLE_EQ(value.values[0]->numValue, 3.0);
+}
+
+TEST(Evaluator, EvalBuiltinPushTooFewArgsIsError) {
+  std::string output;
+  Value value = evalCapturingOutput("push(1);", output);
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "wrong number of arguments: got 1, want 2");
+  EXPECT_EQ(output, "");
+}
+
+TEST(Evaluator, EvalBuiltinPushTooManyArgsIsError) {
+  std::string output;
+  Value value = evalCapturingOutput("push(1, 2, 3);", output);
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "wrong number of arguments: got 3, want 2");
+  EXPECT_EQ(output, "");
+}
+
+TEST(Evaluator, EvalBuiltinPushFirstArgumentNotIdentifierIsError) {
+  std::string output;
+  Value value = evalCapturingOutput("push([1, 2], 3);", output);
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "first argument to push must be an identifier");
+  EXPECT_EQ(output, "");
+}
+
+TEST(Evaluator, EvalBuiltinPushOnNonArrayIsError) {
+  std::string output;
+  Value value = evalCapturingOutput("var notArr = 5; push(notArr, 1);", output);
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "argument to push is not an array: Number");
+  EXPECT_EQ(output, "");
+}
+
+TEST(Evaluator, EvalBuiltinPushUnboundArrayIsError) {
+  std::string output;
+  Value value = evalCapturingOutput("push(nope, 1);", output);
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "identifier not found: nope");
+  EXPECT_EQ(output, "");
+}
+
+TEST(Evaluator, EvalBuiltinPushSecondArgumentErrorIsReturned) {
+  std::string output;
+  Value value = evalCapturingOutput("var arr = []; push(arr, -true);", output);
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "unknown operator: -Bool");
+  EXPECT_EQ(output, "");
+}
+
 } // namespace

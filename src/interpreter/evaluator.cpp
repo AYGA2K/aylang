@@ -10,7 +10,8 @@
 #include <string>
 #include <vector>
 
-inline constexpr std::array<std::string, 2> builtinFuncs = {"print", "len"};
+inline constexpr std::array<std::string, 3> builtinFuncs = {"print", "len",
+                                                            "push"};
 
 bool isBuiltIn(std::string name) {
   for (std::string builtin : builtinFuncs) {
@@ -272,9 +273,9 @@ Value Evaluator::applyFunction(Value &function, std::vector<Value> &args) {
   return evaluted;
 }
 
-Value Evaluator::evaluateBuiltinFuncs(std::string funcName,
-                                      const std::vector<int> &argExprIndexes,
-                                      std::shared_ptr<Environment> env) {
+Value Evaluator::evalBuiltinFuncs(std::string funcName,
+                                  const std::vector<int> &argExprIndexes,
+                                  std::shared_ptr<Environment> env) {
   if (funcName == "print") {
     std::vector<Value> args = evalExpressions(argExprIndexes, env);
     if (args.size() == 1 && isError(args[0])) {
@@ -309,6 +310,35 @@ Value Evaluator::evaluateBuiltinFuncs(std::string funcName,
     return Value{.kind = ValueKind::Number,
                  .numValue = static_cast<double>(args[0].values.size())};
   }
+  if (funcName == "push") {
+    if (argExprIndexes.size() != 2) {
+      std::string message = "wrong number of arguments: got " +
+                            std::to_string(argExprIndexes.size()) + ", want 2";
+      return Value{.kind = ValueKind::Error, .strValue = message};
+    }
+    const Expression &arrayExpr = parserResult.expressions[argExprIndexes[0]];
+    if (arrayExpr.kind != ExpressionKind::IDENTIFIER) {
+      return Value{.kind = ValueKind::Error,
+                   .strValue = "first argument to push must be an identifier"};
+    }
+    Value array = env->get(arrayExpr.literal);
+    if (isError(array)) {
+      return array;
+    }
+    if (!isArray(array)) {
+      std::string message =
+          "argument to push is not an array: " + valueKindToString(array.kind);
+      return Value{.kind = ValueKind::Error, .strValue = message};
+    }
+    Value pushedValue = evalExpression(argExprIndexes[1], env);
+    if (isError(pushedValue)) {
+      return pushedValue;
+    }
+    auto pushedVal = std::make_shared<Value>(pushedValue);
+    array.values.push_back(pushedVal);
+    env->set(arrayExpr.literal, array);
+    return *pushedVal;
+  }
   return {};
 }
 Value Evaluator::evalCallExpression(int functionExprIndex,
@@ -317,7 +347,7 @@ Value Evaluator::evalCallExpression(int functionExprIndex,
   const std::string funcName =
       parserResult.expressions[functionExprIndex].literal;
   if (isBuiltIn(funcName)) {
-    return evaluateBuiltinFuncs(funcName, argExprIndexes, env);
+    return evalBuiltinFuncs(funcName, argExprIndexes, env);
   }
   Value function = env->get(funcName);
   if (isError(function)) {
