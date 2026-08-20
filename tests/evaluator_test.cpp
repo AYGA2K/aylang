@@ -599,6 +599,62 @@ TEST(Evaluator, EvalArrayAddNumberIsError) {
   EXPECT_EQ(value.strValue, "unknown operator: Array + Number");
 }
 
+TEST(Evaluator, EvalArrayIndexReturnsElement) {
+  Value value = eval("var arr = [1, 2, 3]; arr[1];");
+
+  ASSERT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.numValue, 2.0);
+}
+
+TEST(Evaluator, EvalArrayIndexFirstElement) {
+  Value value = eval("var arr = [\"a\", \"b\"]; arr[0];");
+
+  ASSERT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::String));
+  EXPECT_EQ(value.strValue, "a");
+}
+
+TEST(Evaluator, EvalArrayIndexOutOfBoundsIsError) {
+  Value value = eval("var arr = [1, 2]; arr[2];");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "index is bigger than array size");
+}
+
+TEST(Evaluator, EvalArrayIndexNegativeIsError) {
+  Value value = eval("var arr = [1, 2]; arr[-1];");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "index must be greater or equal than zero");
+}
+
+TEST(Evaluator, EvalArrayIndexOnNonArrayIsError) {
+  Value value = eval("var notArr = 5; notArr[0];");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "variable is not an array");
+}
+
+TEST(Evaluator, EvalArrayIndexNonNumberIsError) {
+  Value value = eval("var arr = [1, 2]; arr[true];");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "index must be a number");
+}
+
+TEST(Evaluator, EvalArrayIndexWithBinaryExpression) {
+  Value value = eval("var arr = [1, 2, 3]; arr[1 + 1];");
+
+  ASSERT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.numValue, 3.0);
+}
+
+TEST(Evaluator, EvalArrayIndexWithVariable) {
+  Value value = eval("var arr = [1, 2, 3]; var i = 2; arr[i];");
+
+  ASSERT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.numValue, 3.0);
+}
+
 TEST(Evaluator, EvalErrorStopsFollowingStatements) {
   Value value = eval("-true; 5;");
 

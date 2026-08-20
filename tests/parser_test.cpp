@@ -136,9 +136,9 @@ TEST(Parser, ParseUnaryBang) {
             static_cast<int>(ExpressionKind::UNARY));
   EXPECT_EQ(static_cast<int>(expression.unaryOperator),
             static_cast<int>(UnaryOperator::NOT));
-  ASSERT_GE(expression.operandExprIndex, 0);
+  ASSERT_GE(expression.subExprIndex, 0);
   Expression operand =
-      parser.parserResult.expressions[expression.operandExprIndex];
+      parser.parserResult.expressions[expression.subExprIndex];
   EXPECT_EQ(static_cast<int>(operand.kind),
             static_cast<int>(ExpressionKind::LITERAL_NUMBER));
   EXPECT_DOUBLE_EQ(operand.numValue, 5.0);
@@ -156,9 +156,9 @@ TEST(Parser, ParseUnaryMinus) {
             static_cast<int>(ExpressionKind::UNARY));
   EXPECT_EQ(static_cast<int>(expression.unaryOperator),
             static_cast<int>(UnaryOperator::NEGATE));
-  ASSERT_GE(expression.operandExprIndex, 0);
+  ASSERT_GE(expression.subExprIndex, 0);
   Expression operand =
-      parser.parserResult.expressions[expression.operandExprIndex];
+      parser.parserResult.expressions[expression.subExprIndex];
   EXPECT_EQ(static_cast<int>(operand.kind),
             static_cast<int>(ExpressionKind::LITERAL_NUMBER));
   EXPECT_DOUBLE_EQ(operand.numValue, 15.0);
@@ -176,9 +176,9 @@ TEST(Parser, ParseUnaryBangIdentifier) {
             static_cast<int>(ExpressionKind::UNARY));
   EXPECT_EQ(static_cast<int>(expression.unaryOperator),
             static_cast<int>(UnaryOperator::NOT));
-  ASSERT_GE(expression.operandExprIndex, 0);
+  ASSERT_GE(expression.subExprIndex, 0);
   Expression operand =
-      parser.parserResult.expressions[expression.operandExprIndex];
+      parser.parserResult.expressions[expression.subExprIndex];
   EXPECT_EQ(static_cast<int>(operand.kind),
             static_cast<int>(ExpressionKind::IDENTIFIER));
   EXPECT_EQ(operand.literal, "foobar");
@@ -196,15 +196,15 @@ TEST(Parser, ParseUnaryNested) {
             static_cast<int>(ExpressionKind::UNARY));
   EXPECT_EQ(static_cast<int>(expression.unaryOperator),
             static_cast<int>(UnaryOperator::NOT));
-  ASSERT_GE(expression.operandExprIndex, 0);
+  ASSERT_GE(expression.subExprIndex, 0);
   Expression inner =
-      parser.parserResult.expressions[expression.operandExprIndex];
+      parser.parserResult.expressions[expression.subExprIndex];
   EXPECT_EQ(static_cast<int>(inner.kind),
             static_cast<int>(ExpressionKind::UNARY));
   EXPECT_EQ(static_cast<int>(inner.unaryOperator),
             static_cast<int>(UnaryOperator::NOT));
-  ASSERT_GE(inner.operandExprIndex, 0);
-  Expression operand = parser.parserResult.expressions[inner.operandExprIndex];
+  ASSERT_GE(inner.subExprIndex, 0);
+  Expression operand = parser.parserResult.expressions[inner.subExprIndex];
   EXPECT_EQ(static_cast<int>(operand.kind),
             static_cast<int>(ExpressionKind::LITERAL_NUMBER));
   EXPECT_DOUBLE_EQ(operand.numValue, 5.0);
@@ -260,9 +260,9 @@ TEST(Parser, ParseUnaryBangBoolean) {
             static_cast<int>(ExpressionKind::UNARY));
   EXPECT_EQ(static_cast<int>(expression.unaryOperator),
             static_cast<int>(UnaryOperator::NOT));
-  ASSERT_GE(expression.operandExprIndex, 0);
+  ASSERT_GE(expression.subExprIndex, 0);
   Expression operand =
-      parser.parserResult.expressions[expression.operandExprIndex];
+      parser.parserResult.expressions[expression.subExprIndex];
   EXPECT_EQ(static_cast<int>(operand.kind),
             static_cast<int>(ExpressionKind::LITERAL_BOOL));
   EXPECT_TRUE(operand.boolValue);
@@ -1037,7 +1037,7 @@ TEST(Parser, ParseIndexExpression) {
   EXPECT_EQ(static_cast<int>(expression.kind),
             static_cast<int>(ExpressionKind::INDEX));
   EXPECT_EQ(expression.literal, "arr");
-  EXPECT_DOUBLE_EQ(at(parser, expression.operandExprIndex).numValue, 1.0);
+  EXPECT_DOUBLE_EQ(at(parser, expression.subExprIndex).numValue, 1.0);
   EXPECT_TRUE(parser.errors.empty());
 }
 
@@ -1064,7 +1064,7 @@ TEST(Parser, ParseIndexExpressionWithBinaryIndex) {
   EXPECT_EQ(static_cast<int>(expression.kind),
             static_cast<int>(ExpressionKind::INDEX));
   EXPECT_EQ(expression.literal, "arr");
-  Expression indexExpr = at(parser, expression.operandExprIndex);
+  Expression indexExpr = at(parser, expression.subExprIndex);
   EXPECT_EQ(static_cast<int>(indexExpr.kind),
             static_cast<int>(ExpressionKind::BINARY));
   EXPECT_EQ(static_cast<int>(indexExpr.binaryOperator),

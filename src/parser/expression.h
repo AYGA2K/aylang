@@ -53,9 +53,9 @@ struct Expression {
   int leftExprIndex = -1;
   int rightExprIndex = -1;
 
-  // Unary Expression
+  // Unary Expression, Index Expression
   UnaryOperator unaryOperator;
-  int operandExprIndex = -1;
+  int subExprIndex = -1;
 
   // Functions
   std::vector<std::string> parameters;

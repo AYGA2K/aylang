@@ -50,7 +50,7 @@ Value Evaluator::evalExpression(int index, std::shared_ptr<Environment> env) {
   case ExpressionKind::LITERAL_BOOL:
     return Value{.kind = ValueKind::Bool, .boolValue = expr.boolValue};
   case ExpressionKind::UNARY: {
-    Value value = evalExpression(expr.operandExprIndex, env);
+    Value value = evalExpression(expr.subExprIndex, env);
     return evalPrefixExpression(expr.unaryOperator, value);
   }
   case ExpressionKind::BINARY: {
@@ -72,6 +72,8 @@ Value Evaluator::evalExpression(int index, std::shared_ptr<Environment> env) {
                               env);
   case ExpressionKind::LITERAL_ARRAY:
     return evalArray(index, env);
+  case ExpressionKind::INDEX:
+    return evalArrayIndex(index, env);
   case ExpressionKind::STAR:
     break;
   }
@@ -335,5 +337,33 @@ Value Evaluator::evalArray(int index, std::shared_ptr<Environment> env) {
   for (int indx : expr.expressionsIndexes) {
     value.values.push_back(std::make_shared<Value>(evalExpression(indx, env)));
   }
+  return value;
+}
+
+Value Evaluator::evalArrayIndex(int index, std::shared_ptr<Environment> env) {
+  Expression indexexpr = parserResult.expressions[index];
+  Value indexValue = evalExpression(indexexpr.subExprIndex, env);
+  if (isError(indexValue)) {
+    return indexValue;
+  }
+  if (indexValue.kind != ValueKind::Number) {
+    return Value{.kind = ValueKind::Error,
+                 .strValue = "index must be a number"};
+  }
+  if (indexValue.numValue < 0) {
+    return Value{.kind = ValueKind::Error,
+                 .strValue = "index must be greater or equal than zero"};
+  }
+  size_t arrIndex = indexValue.numValue;
+  Value array = env->get(indexexpr.literal);
+  if (array.kind != ValueKind::Array) {
+    return Value{.kind = ValueKind::Error,
+                 .strValue = "variable is not an array"};
+  }
+  if (arrIndex >= array.values.size()) {
+    return Value{.kind = ValueKind::Error,
+                 .strValue = "index is bigger than array size"};
+  }
+  Value value = *array.values[arrIndex];
   return value;
 }

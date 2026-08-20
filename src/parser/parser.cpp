@@ -212,7 +212,7 @@ int Parser::parseUnary() {
   }
   current++; // skip the operator
   // Child expressions live in parserResult.expressions, referenced by index
-  expression.operandExprIndex = parseExpression(Precedence::UNARY);
+  expression.subExprIndex = parseExpression(Precedence::UNARY);
   parserResult.expressions.push_back(expression);
   return static_cast<int>(parserResult.expressions.size()) - 1;
 }
@@ -427,7 +427,7 @@ int Parser::parseIndexExpression(int leftExprIndex) {
     return -1;
   }
   current++; // move to "]"
-  expression.operandExprIndex = indexExpr;
+  expression.subExprIndex = indexExpr;
   parserResult.expressions.push_back(expression);
   return static_cast<int>(parserResult.expressions.size()) - 1;
 }
