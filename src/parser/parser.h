@@ -53,6 +53,8 @@ struct Parser {
 
     registerPrefix(TokenType::LBrack, [this] { return parseArray(); });
 
+    registerPrefix(TokenType::LBrace, [this] { return parseHashLiteral(); });
+
     registerPrefix(TokenType::Function, [this] { return parseFunction(); });
 
     auto unary = [this] { return parseUnary(); };
@@ -109,6 +111,7 @@ struct Parser {
   std::vector<std::string> parseFunctionParams();
   int parseCallExpression(int leftExprIndex);
   std::vector<int> parseCallParams();
+  int parseHashLiteral();
   void registerPrefix(TokenType tokenType, PrefixParseFn fn);
   void registerInfix(TokenType tokenType, InfixParseFn fn);
 };

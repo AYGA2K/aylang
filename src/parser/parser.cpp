@@ -461,6 +461,58 @@ std::vector<int> Parser::parseArrayValues() {
   return values;
 }
 
+int Parser::parseHashLiteral() {
+  current++; // move past "{"
+  Expression expression;
+  expression.kind = ExpressionKind::LITERAL_HASH;
+  // empty => "{}"
+  if (currentTokenIs(TokenType::RBrace)) {
+    parserResult.expressions.push_back(expression);
+    return static_cast<int>(parserResult.expressions.size()) - 1;
+  }
+  int keyIndex = parseExpression(Precedence::LOWEST);
+  if (keyIndex == -1) {
+    return -1;
+  }
+  if (!nextTokenIs(TokenType::Colon)) {
+    errors.push_back(expectedTokenError(TokenType::Colon, nextToken().type));
+    return -1;
+  }
+  current += 2; // move past the key and ":"
+  int valIndex = parseExpression(Precedence::LOWEST);
+  if (valIndex == -1) {
+    return -1;
+  }
+  expression.pairs[keyIndex] = valIndex;
+
+  while (nextTokenIs(TokenType::Comma)) {
+    current += 2; // move past the current value and the comma
+    keyIndex = parseExpression(Precedence::LOWEST);
+    if (keyIndex == -1) {
+      return -1;
+    }
+    if (!nextTokenIs(TokenType::Colon)) {
+      errors.push_back(
+          expectedTokenError(TokenType::Colon, nextToken().type));
+      return -1;
+    }
+    current += 2; // move past the key and ":"
+    valIndex = parseExpression(Precedence::LOWEST);
+    if (valIndex == -1) {
+      return -1;
+    }
+    expression.pairs[keyIndex] = valIndex;
+  }
+
+  if (!nextTokenIs(TokenType::RBrace)) {
+    errors.push_back(expectedTokenError(TokenType::RBrace, nextToken().type));
+    return -1;
+  }
+  current++; // move to "}"
+  parserResult.expressions.push_back(expression);
+  return static_cast<int>(parserResult.expressions.size()) - 1;
+}
+
 std::string expectedTokenError(TokenType expected, TokenType got) {
   return "Expected next token to be " + tokenTypeToString(expected) + ", got " +
          tokenTypeToString(got);

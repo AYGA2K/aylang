@@ -6,6 +6,7 @@
 #include <gtest/gtest.h>
 
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace {
@@ -1081,6 +1082,96 @@ TEST(Parser, ParseIndexExpressionMissingCloseBracket) {
   ASSERT_FALSE(parser.errors.empty());
   EXPECT_EQ(parser.errors[0],
             "Expected next token to be RBrack, got Semicolon");
+}
+
+TEST(Parser, ParseHashLiteralEmpty) {
+  std::vector<Token> tokens = tokenize("{};");
+  Parser parser{tokens};
+
+  parser.parseExpressionStatement();
+
+  ASSERT_FALSE(parser.parserResult.statements.empty());
+  Expression expression =
+      at(parser, parser.parserResult.statements[0].expressionIndex);
+  EXPECT_EQ(static_cast<int>(expression.kind),
+            static_cast<int>(ExpressionKind::LITERAL_HASH));
+  EXPECT_TRUE(expression.pairs.empty());
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseHashLiteralSinglePair) {
+  std::vector<Token> tokens = tokenize("{\"one\": 1};");
+  Parser parser{tokens};
+
+  parser.parseExpressionStatement();
+
+  ASSERT_FALSE(parser.parserResult.statements.empty());
+  Expression expression =
+      at(parser, parser.parserResult.statements[0].expressionIndex);
+  EXPECT_EQ(static_cast<int>(expression.kind),
+            static_cast<int>(ExpressionKind::LITERAL_HASH));
+  ASSERT_EQ(expression.pairs.size(), 1u);
+
+  auto [keyIndex, valueIndex] = *expression.pairs.begin();
+  Expression key = at(parser, keyIndex);
+  Expression value = at(parser, valueIndex);
+  EXPECT_EQ(static_cast<int>(key.kind),
+            static_cast<int>(ExpressionKind::LITERAL_STRING));
+  EXPECT_EQ(key.literal, "one");
+  EXPECT_EQ(static_cast<int>(value.kind),
+            static_cast<int>(ExpressionKind::LITERAL_NUMBER));
+  EXPECT_DOUBLE_EQ(value.numValue, 1.0);
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseHashLiteralMultiplePairs) {
+  std::vector<Token> tokens = tokenize("{\"one\": 1, \"two\": 2 * 3};");
+  Parser parser{tokens};
+
+  parser.parseExpressionStatement();
+
+  ASSERT_FALSE(parser.parserResult.statements.empty());
+  Expression expression =
+      at(parser, parser.parserResult.statements[0].expressionIndex);
+  EXPECT_EQ(static_cast<int>(expression.kind),
+            static_cast<int>(ExpressionKind::LITERAL_HASH));
+  ASSERT_EQ(expression.pairs.size(), 2u);
+
+  std::unordered_map<std::string, int> valueIndexByKey;
+  for (auto &[keyIndex, valueIndex] : expression.pairs) {
+    valueIndexByKey[at(parser, keyIndex).literal] = valueIndex;
+  }
+
+  ASSERT_EQ(valueIndexByKey.count("one"), 1u);
+  EXPECT_DOUBLE_EQ(at(parser, valueIndexByKey["one"]).numValue, 1.0);
+
+  ASSERT_EQ(valueIndexByKey.count("two"), 1u);
+  Expression two = at(parser, valueIndexByKey["two"]);
+  EXPECT_EQ(static_cast<int>(two.kind), static_cast<int>(ExpressionKind::BINARY));
+  EXPECT_EQ(static_cast<int>(two.binaryOperator),
+            static_cast<int>(BinaryOperator::MULTIPLY));
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseHashLiteralMissingColon) {
+  std::vector<Token> tokens = tokenize("{\"one\" 1};");
+  Parser parser{tokens};
+
+  parser.parseExpressionStatement();
+
+  ASSERT_FALSE(parser.errors.empty());
+  EXPECT_EQ(parser.errors[0], "Expected next token to be Colon, got Number");
+}
+
+TEST(Parser, ParseHashLiteralMissingCloseBrace) {
+  std::vector<Token> tokens = tokenize("{\"one\": 1;");
+  Parser parser{tokens};
+
+  parser.parseExpressionStatement();
+
+  ASSERT_FALSE(parser.errors.empty());
+  EXPECT_EQ(parser.errors[0],
+            "Expected next token to be RBrace, got Semicolon");
 }
 
 } // namespace

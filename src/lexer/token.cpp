@@ -37,6 +37,8 @@ std::string tokenTypeToString(TokenType type) {
     return "Comma";
   case TokenType::Semicolon:
     return "Semicolon";
+  case TokenType::Colon:
+    return "Colon";
   case TokenType::Equal:
     return "Equal";
   case TokenType::NotEqual:

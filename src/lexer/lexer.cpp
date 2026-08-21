@@ -96,6 +96,8 @@ Token Lexer::nextToken() {
     return Token{.type = TokenType::Comma, .literal = ","};
   case ';':
     return Token{.type = TokenType::Semicolon, .literal = ";"};
+  case ':':
+    return Token{.type = TokenType::Colon, .literal = ":"};
   case '=':
     if (peekChar() == '=') {
       current++;

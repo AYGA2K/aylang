@@ -20,6 +20,7 @@ enum class TokenType {
   RBrack,
   Comma,
   Semicolon,
+  Colon,
   Equal,
   NotEqual,
   LessThan,
