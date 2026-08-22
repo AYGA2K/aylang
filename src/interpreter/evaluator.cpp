@@ -75,6 +75,8 @@ Value Evaluator::evalExpression(int index, std::shared_ptr<Environment> env) {
     return evalArray(index, env);
   case ExpressionKind::INDEX:
     return evalArrayIndex(index, env);
+  case ExpressionKind::LITERAL_HASH:
+    return evalHashMap(index, env);
   case ExpressionKind::STAR:
     break;
   }
@@ -368,6 +370,14 @@ Value Evaluator::evalCallExpression(int functionExprIndex,
 Value Evaluator::evalArray(int index, std::shared_ptr<Environment> env) {
   Expression expr = parserResult.expressions[index];
   Value value{.kind = ValueKind::Array};
+  for (int indx : expr.expressionsIndexes) {
+    value.values.push_back(std::make_shared<Value>(evalExpression(indx, env)));
+  }
+  return value;
+}
+Value Evaluator::evalHashMap(int index, std::shared_ptr<Environment> env) {
+  Expression expr = parserResult.expressions[index];
+  Value value{.kind = ValueKind::HashMap};
   for (int indx : expr.expressionsIndexes) {
     value.values.push_back(std::make_shared<Value>(evalExpression(indx, env)));
   }

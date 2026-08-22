@@ -6,7 +6,6 @@
 #include <gtest/gtest.h>
 
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 namespace {
@@ -1095,7 +1094,7 @@ TEST(Parser, ParseHashLiteralEmpty) {
       at(parser, parser.parserResult.statements[0].expressionIndex);
   EXPECT_EQ(static_cast<int>(expression.kind),
             static_cast<int>(ExpressionKind::LITERAL_HASH));
-  EXPECT_TRUE(expression.pairs.empty());
+  EXPECT_TRUE(expression.expressionsIndexes.empty());
   EXPECT_TRUE(parser.errors.empty());
 }
 
@@ -1110,11 +1109,10 @@ TEST(Parser, ParseHashLiteralSinglePair) {
       at(parser, parser.parserResult.statements[0].expressionIndex);
   EXPECT_EQ(static_cast<int>(expression.kind),
             static_cast<int>(ExpressionKind::LITERAL_HASH));
-  ASSERT_EQ(expression.pairs.size(), 1u);
+  ASSERT_EQ(expression.expressionsIndexes.size(), 2u);
 
-  auto [keyIndex, valueIndex] = *expression.pairs.begin();
-  Expression key = at(parser, keyIndex);
-  Expression value = at(parser, valueIndex);
+  Expression key = at(parser, expression.expressionsIndexes[0]);
+  Expression value = at(parser, expression.expressionsIndexes[1]);
   EXPECT_EQ(static_cast<int>(key.kind),
             static_cast<int>(ExpressionKind::LITERAL_STRING));
   EXPECT_EQ(key.literal, "one");
@@ -1135,19 +1133,15 @@ TEST(Parser, ParseHashLiteralMultiplePairs) {
       at(parser, parser.parserResult.statements[0].expressionIndex);
   EXPECT_EQ(static_cast<int>(expression.kind),
             static_cast<int>(ExpressionKind::LITERAL_HASH));
-  ASSERT_EQ(expression.pairs.size(), 2u);
+  ASSERT_EQ(expression.expressionsIndexes.size(), 4u);
 
-  std::unordered_map<std::string, int> valueIndexByKey;
-  for (auto &[keyIndex, valueIndex] : expression.pairs) {
-    valueIndexByKey[at(parser, keyIndex).literal] = valueIndex;
-  }
+  EXPECT_EQ(at(parser, expression.expressionsIndexes[0]).literal, "one");
+  EXPECT_DOUBLE_EQ(at(parser, expression.expressionsIndexes[1]).numValue, 1.0);
 
-  ASSERT_EQ(valueIndexByKey.count("one"), 1u);
-  EXPECT_DOUBLE_EQ(at(parser, valueIndexByKey["one"]).numValue, 1.0);
-
-  ASSERT_EQ(valueIndexByKey.count("two"), 1u);
-  Expression two = at(parser, valueIndexByKey["two"]);
-  EXPECT_EQ(static_cast<int>(two.kind), static_cast<int>(ExpressionKind::BINARY));
+  EXPECT_EQ(at(parser, expression.expressionsIndexes[2]).literal, "two");
+  Expression two = at(parser, expression.expressionsIndexes[3]);
+  EXPECT_EQ(static_cast<int>(two.kind),
+            static_cast<int>(ExpressionKind::BINARY));
   EXPECT_EQ(static_cast<int>(two.binaryOperator),
             static_cast<int>(BinaryOperator::MULTIPLY));
   EXPECT_TRUE(parser.errors.empty());

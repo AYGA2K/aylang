@@ -36,5 +36,7 @@ struct Evaluator {
                          std::shared_ptr<Environment> env);
   Value evalArray(int index, std::shared_ptr<Environment> env);
 
+  Value evalHashMap(int index, std::shared_ptr<Environment> env);
+
   Value evalArrayIndex(int index, std::shared_ptr<Environment> env);
 };

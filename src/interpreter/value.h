@@ -12,7 +12,8 @@ enum class ValueKind {
   Error,
   Function,
   BUILTIN,
-  Array
+  Array,
+  HashMap
 };
 struct Environment;
 

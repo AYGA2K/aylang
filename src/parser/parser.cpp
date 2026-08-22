@@ -483,7 +483,8 @@ int Parser::parseHashLiteral() {
   if (valIndex == -1) {
     return -1;
   }
-  expression.pairs[keyIndex] = valIndex;
+  expression.expressionsIndexes.push_back(keyIndex);
+  expression.expressionsIndexes.push_back(valIndex);
 
   while (nextTokenIs(TokenType::Comma)) {
     current += 2; // move past the current value and the comma
@@ -501,7 +502,8 @@ int Parser::parseHashLiteral() {
     if (valIndex == -1) {
       return -1;
     }
-    expression.pairs[keyIndex] = valIndex;
+    expression.expressionsIndexes.push_back(keyIndex);
+    expression.expressionsIndexes.push_back(valIndex);
   }
 
   if (!nextTokenIs(TokenType::RBrace)) {

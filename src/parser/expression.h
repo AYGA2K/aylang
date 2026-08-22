@@ -1,7 +1,6 @@
 #pragma once
 
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 enum class ExpressionKind {
@@ -65,11 +64,9 @@ struct Expression {
 
   // Call expression
   int functionExprIndex = -1;
-  // params for functions and values for arrays
+  // params for functions, values for arrays, and flattened key/value pairs
+  // for hashes
   std::vector<int> expressionsIndexes;
-
-  // Maps
-  std::unordered_map<int, int> pairs;
 };
 
 std::string unaryOperatorToString(UnaryOperator oper);

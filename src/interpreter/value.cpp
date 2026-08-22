@@ -1,4 +1,5 @@
 #include "value.h"
+#include <cstddef>
 #include <format>
 #include <string>
 
@@ -12,6 +13,19 @@ static std::string buildArrString(const Value &value) {
   }
   format += "]";
   return format;
+}
+static std::string buildHashMapString(const Value &value){
+    std::string format = "{";
+    for (size_t indx = 0; indx<value.values.size(); indx+=2) {
+        format += inspect(*value.values[indx]);
+        format += ":";
+        format += inspect(*value.values[indx+1]);
+        if (indx < value.values.size() - 2) {
+            format += ",";
+        }
+    }
+    format += "}";
+    return format;
 }
 std::string inspect(const Value &value) {
   switch (value.kind) {
@@ -28,6 +42,9 @@ std::string inspect(const Value &value) {
     return buildArrString(value);
   case ValueKind::BUILTIN:
   case ValueKind::Function:
+    break;
+  case ValueKind::HashMap:
+      return buildHashMapString(value);
     break;
   }
   return "null";
@@ -50,6 +67,9 @@ std::string valueKindToString(ValueKind kind) {
     return "Function";
   case ValueKind::Array:
     return "Array";
+  case ValueKind::HashMap:
+      return "HashMap";
+    break;
   }
   return "Unknown";
 }
