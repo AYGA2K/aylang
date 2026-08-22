@@ -192,7 +192,8 @@ Value Evaluator::evalIfStatement(int index, std::shared_ptr<Environment> env) {
   if (isTruthy(conditionValue)) {
     return evalBlockStatement(stmt.consequenceStmtIndex, env);
   } else if (stmt.alternativeStmtIndex != -1) {
-    return evalBlockStatement(stmt.alternativeStmtIndex, env);
+    // "else if" alternatives are IF statements, plain "else" ones are blocks
+    return evalStatement(stmt.alternativeStmtIndex, env);
   }
   return {};
 }

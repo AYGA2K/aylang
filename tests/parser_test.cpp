@@ -645,6 +645,261 @@ TEST(Parser, ParseIfElseStatementMultipleAlternativeStatements) {
   EXPECT_EQ(second.literal, "b");
 }
 
+TEST(Parser, ParseIfElseIfStatement) {
+  std::vector<Token> tokens = tokenize("if (x) { y; } else if (a) { b; }");
+  Parser parser{tokens};
+
+  int index = parser.parseIfStatement();
+  ASSERT_GE(index, 0);
+  Statement statement = parser.parserResult.statements[index];
+
+  ASSERT_GE(statement.alternativeStmtIndex, 0);
+  Statement alternative =
+      parser.parserResult.statements[statement.alternativeStmtIndex];
+  EXPECT_EQ(static_cast<int>(alternative.kind),
+            static_cast<int>(StatementKind::IF));
+
+  ASSERT_GE(alternative.conditionExprIndex, 0);
+  Expression condition = at(parser, alternative.conditionExprIndex);
+  EXPECT_EQ(static_cast<int>(condition.kind),
+            static_cast<int>(ExpressionKind::IDENTIFIER));
+  EXPECT_EQ(condition.literal, "a");
+
+  ASSERT_GE(alternative.consequenceStmtIndex, 0);
+  Statement block =
+      parser.parserResult.statements[alternative.consequenceStmtIndex];
+  EXPECT_EQ(static_cast<int>(block.kind),
+            static_cast<int>(StatementKind::BLOCK));
+  ASSERT_EQ(block.statementsIndexes.size(), 1u);
+  Expression consequenceExpr =
+      at(parser,
+         parser.parserResult.statements[block.statementsIndexes[0]]
+             .expressionIndex);
+  EXPECT_EQ(consequenceExpr.literal, "b");
+  EXPECT_EQ(alternative.alternativeStmtIndex, -1);
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseIfElseIfElseStatement) {
+  std::vector<Token> tokens =
+      tokenize("if (x) { y; } else if (a) { b; } else { c; }");
+  Parser parser{tokens};
+
+  int index = parser.parseIfStatement();
+  ASSERT_GE(index, 0);
+  Statement statement = parser.parserResult.statements[index];
+
+  ASSERT_GE(statement.alternativeStmtIndex, 0);
+  Statement alternative =
+      parser.parserResult.statements[statement.alternativeStmtIndex];
+  EXPECT_EQ(static_cast<int>(alternative.kind),
+            static_cast<int>(StatementKind::IF));
+  EXPECT_EQ(at(parser, alternative.conditionExprIndex).literal, "a");
+
+  ASSERT_GE(alternative.alternativeStmtIndex, 0);
+  Statement elseBlock =
+      parser.parserResult.statements[alternative.alternativeStmtIndex];
+  EXPECT_EQ(static_cast<int>(elseBlock.kind),
+            static_cast<int>(StatementKind::BLOCK));
+  ASSERT_EQ(elseBlock.statementsIndexes.size(), 1u);
+  Expression elseExpr =
+      at(parser,
+         parser.parserResult.statements[elseBlock.statementsIndexes[0]]
+             .expressionIndex);
+  EXPECT_EQ(elseExpr.literal, "c");
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseIfElseIfChain) {
+  std::vector<Token> tokens = tokenize(
+      "if (x) { y; } else if (a) { b; } else if (c) { d; } else { e; }");
+  Parser parser{tokens};
+
+  int index = parser.parseIfStatement();
+  ASSERT_GE(index, 0);
+  Statement statement = parser.parserResult.statements[index];
+
+  ASSERT_GE(statement.alternativeStmtIndex, 0);
+  Statement first =
+      parser.parserResult.statements[statement.alternativeStmtIndex];
+  EXPECT_EQ(static_cast<int>(first.kind),
+            static_cast<int>(StatementKind::IF));
+  EXPECT_EQ(at(parser, first.conditionExprIndex).literal, "a");
+
+  ASSERT_GE(first.alternativeStmtIndex, 0);
+  Statement second = parser.parserResult.statements[first.alternativeStmtIndex];
+  EXPECT_EQ(static_cast<int>(second.kind),
+            static_cast<int>(StatementKind::IF));
+  EXPECT_EQ(at(parser, second.conditionExprIndex).literal, "c");
+
+  ASSERT_GE(second.alternativeStmtIndex, 0);
+  Statement elseBlock =
+      parser.parserResult.statements[second.alternativeStmtIndex];
+  EXPECT_EQ(static_cast<int>(elseBlock.kind),
+            static_cast<int>(StatementKind::BLOCK));
+  ASSERT_EQ(elseBlock.statementsIndexes.size(), 1u);
+  Expression elseExpr =
+      at(parser,
+         parser.parserResult.statements[elseBlock.statementsIndexes[0]]
+             .expressionIndex);
+  EXPECT_EQ(elseExpr.literal, "e");
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseIfElseIfBinaryConditions) {
+  std::vector<Token> tokens =
+      tokenize("if (x < y) { y; } else if (x > y) { x; }");
+  Parser parser{tokens};
+
+  int index = parser.parseIfStatement();
+  ASSERT_GE(index, 0);
+  Statement statement = parser.parserResult.statements[index];
+
+  Expression condition = at(parser, statement.conditionExprIndex);
+  EXPECT_EQ(static_cast<int>(condition.binaryOperator),
+            static_cast<int>(BinaryOperator::LESS_THAN));
+
+  ASSERT_GE(statement.alternativeStmtIndex, 0);
+  Statement alternative =
+      parser.parserResult.statements[statement.alternativeStmtIndex];
+  Expression alternativeCondition =
+      at(parser, alternative.conditionExprIndex);
+  EXPECT_EQ(static_cast<int>(alternativeCondition.kind),
+            static_cast<int>(ExpressionKind::BINARY));
+  EXPECT_EQ(static_cast<int>(alternativeCondition.binaryOperator),
+            static_cast<int>(BinaryOperator::GREATER_THAN));
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseIfElseIfMultipleStatementsPerBranch) {
+  std::vector<Token> tokens =
+      tokenize("if (x) { y; z; } else if (a) { b; c; } else { d; e; }");
+  Parser parser{tokens};
+
+  int index = parser.parseIfStatement();
+  ASSERT_GE(index, 0);
+  Statement statement = parser.parserResult.statements[index];
+
+  Statement consequence =
+      parser.parserResult.statements[statement.consequenceStmtIndex];
+  ASSERT_EQ(consequence.statementsIndexes.size(), 2u);
+
+  ASSERT_GE(statement.alternativeStmtIndex, 0);
+  Statement alternative =
+      parser.parserResult.statements[statement.alternativeStmtIndex];
+  Statement alternativeConsequence =
+      parser.parserResult.statements[alternative.consequenceStmtIndex];
+  ASSERT_EQ(alternativeConsequence.statementsIndexes.size(), 2u);
+
+  Statement elseBlock =
+      parser.parserResult.statements[alternative.alternativeStmtIndex];
+  ASSERT_EQ(elseBlock.statementsIndexes.size(), 2u);
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseIfElseAsProgramStatementFollowedByStatement) {
+  std::vector<Token> tokens = tokenize("if (x) { y; } else { z; } w;");
+  Parser parser{tokens};
+
+  parser.parse();
+
+  ASSERT_EQ(parser.parserResult.programStatementsIndexes.size(), 2u);
+  Statement ifStatement =
+      parser.parserResult
+          .statements[parser.parserResult.programStatementsIndexes[0]];
+  EXPECT_EQ(static_cast<int>(ifStatement.kind),
+            static_cast<int>(StatementKind::IF));
+  Statement next =
+      parser.parserResult
+          .statements[parser.parserResult.programStatementsIndexes[1]];
+  EXPECT_EQ(static_cast<int>(next.kind),
+            static_cast<int>(StatementKind::EXPRESSION));
+  EXPECT_EQ(at(parser, next.expressionIndex).literal, "w");
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseIfElseIfAsProgramStatementFollowedByStatement) {
+  std::vector<Token> tokens =
+      tokenize("if (x) { y; } else if (a) { b; } else { c; } w;");
+  Parser parser{tokens};
+
+  parser.parse();
+
+  ASSERT_EQ(parser.parserResult.programStatementsIndexes.size(), 2u);
+  Statement ifStatement =
+      parser.parserResult
+          .statements[parser.parserResult.programStatementsIndexes[0]];
+  EXPECT_EQ(static_cast<int>(ifStatement.kind),
+            static_cast<int>(StatementKind::IF));
+  Statement next =
+      parser.parserResult
+          .statements[parser.parserResult.programStatementsIndexes[1]];
+  EXPECT_EQ(at(parser, next.expressionIndex).literal, "w");
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseIfElseIfMissingCondition) {
+  std::vector<Token> tokens = tokenize("if (x) { y; } else if { b; }");
+  Parser parser{tokens};
+
+  int index = parser.parseIfStatement();
+  ASSERT_GE(index, 0);
+  Statement statement = parser.parserResult.statements[index];
+
+  EXPECT_EQ(statement.alternativeStmtIndex, -1);
+  EXPECT_FALSE(parser.errors.empty());
+}
+
+TEST(Parser, ParseIfElseMissingAlternativeBlock) {
+  std::vector<Token> tokens = tokenize("if (x) { y; } else");
+  Parser parser{tokens};
+
+  int index = parser.parseIfStatement();
+  ASSERT_GE(index, 0);
+  Statement statement = parser.parserResult.statements[index];
+
+  EXPECT_EQ(statement.alternativeStmtIndex, -1);
+  EXPECT_FALSE(parser.errors.empty());
+}
+
+TEST(Parser, ParseNestedIfElseInsideConsequence) {
+  std::vector<Token> tokens =
+      tokenize("if (x) { if (a) { b; } else { c; } } else { d; }");
+  Parser parser{tokens};
+
+  int index = parser.parseIfStatement();
+  ASSERT_GE(index, 0);
+  Statement statement = parser.parserResult.statements[index];
+
+  Statement consequence =
+      parser.parserResult.statements[statement.consequenceStmtIndex];
+  ASSERT_EQ(consequence.statementsIndexes.size(), 1u);
+  Statement inner =
+      parser.parserResult.statements[consequence.statementsIndexes[0]];
+  EXPECT_EQ(static_cast<int>(inner.kind),
+            static_cast<int>(StatementKind::IF));
+  ASSERT_GE(inner.alternativeStmtIndex, 0);
+  Statement innerElse =
+      parser.parserResult.statements[inner.alternativeStmtIndex];
+  ASSERT_EQ(innerElse.statementsIndexes.size(), 1u);
+  Expression innerElseExpr =
+      at(parser,
+         parser.parserResult.statements[innerElse.statementsIndexes[0]]
+             .expressionIndex);
+  EXPECT_EQ(innerElseExpr.literal, "c");
+
+  ASSERT_GE(statement.alternativeStmtIndex, 0);
+  Statement outerElse =
+      parser.parserResult.statements[statement.alternativeStmtIndex];
+  ASSERT_EQ(outerElse.statementsIndexes.size(), 1u);
+  Expression outerElseExpr =
+      at(parser,
+         parser.parserResult.statements[outerElse.statementsIndexes[0]]
+             .expressionIndex);
+  EXPECT_EQ(outerElseExpr.literal, "d");
+  EXPECT_TRUE(parser.errors.empty());
+}
+
 TEST(Parser, ParseIfStatementMissingOpenParen) {
   std::vector<Token> tokens = tokenize("if x) { y; }");
   Parser parser{tokens};

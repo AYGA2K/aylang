@@ -286,7 +286,12 @@ int Parser::parseIfStatement() {
   statement.consequenceStmtIndex = parseBlockStatement();
   if (nextTokenIs(TokenType::Else)) {
     current++; // move to "else"
-    statement.alternativeStmtIndex = parseBlockStatement();
+    if (nextTokenIs(TokenType::If)) {
+      current++; // move to "if"
+      statement.alternativeStmtIndex = parseIfStatement();
+    } else {
+      statement.alternativeStmtIndex = parseBlockStatement();
+    }
   }
   parserResult.statements.push_back(statement);
   return static_cast<int>(parserResult.statements.size()) - 1;

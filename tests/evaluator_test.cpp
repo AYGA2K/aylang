@@ -837,6 +837,226 @@ TEST(Evaluator, EvalErrorConditionSkipsIfBranches) {
   EXPECT_EQ(value.strValue, "unknown operator: -Bool");
 }
 
+TEST(Evaluator, EvalIfTrueConditionRunsConsequence) {
+  Value value = eval("if (true) { 1; } else { 2; }");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.numValue, 1.0);
+}
+
+TEST(Evaluator, EvalIfFalseConditionRunsAlternative) {
+  Value value = eval("if (false) { 1; } else { 2; }");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.numValue, 2.0);
+}
+
+TEST(Evaluator, EvalIfWithoutElseFalseConditionIsNull) {
+  Value value = eval("if (false) { 1; }");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Null));
+}
+
+TEST(Evaluator, EvalIfWithoutElseTrueCondition) {
+  Value value = eval("if (true) { 1; }");
+
+  EXPECT_DOUBLE_EQ(value.numValue, 1.0);
+}
+
+TEST(Evaluator, EvalIfNumberConditionIsTruthy) {
+  Value value = eval("if (0) { 1; } else { 2; }");
+
+  EXPECT_DOUBLE_EQ(value.numValue, 1.0);
+}
+
+TEST(Evaluator, EvalIfStringConditionIsTruthy) {
+  Value value = eval("if (\"\") { 1; } else { 2; }");
+
+  EXPECT_DOUBLE_EQ(value.numValue, 1.0);
+}
+
+TEST(Evaluator, EvalIfEmptyArrayConditionIsTruthy) {
+  Value value = eval("if ([]) { 1; } else { 2; }");
+
+  EXPECT_DOUBLE_EQ(value.numValue, 1.0);
+}
+
+TEST(Evaluator, EvalIfComparisonConditionTrue) {
+  Value value = eval("if (2 > 1) { 1; } else { 2; }");
+
+  EXPECT_DOUBLE_EQ(value.numValue, 1.0);
+}
+
+TEST(Evaluator, EvalIfComparisonConditionFalse) {
+  Value value = eval("if (1 > 2) { 1; } else { 2; }");
+
+  EXPECT_DOUBLE_EQ(value.numValue, 2.0);
+}
+
+TEST(Evaluator, EvalIfNegatedConditionRunsAlternative) {
+  Value value = eval("if (!true) { 1; } else { 2; }");
+
+  EXPECT_DOUBLE_EQ(value.numValue, 2.0);
+}
+
+TEST(Evaluator, EvalIfConsequenceReturnsLastStatement) {
+  Value value = eval("if (true) { 1; 2; 3; } else { 9; }");
+
+  EXPECT_DOUBLE_EQ(value.numValue, 3.0);
+}
+
+TEST(Evaluator, EvalIfAlternativeReturnsLastStatement) {
+  Value value = eval("if (false) { 1; } else { 8; 9; }");
+
+  EXPECT_DOUBLE_EQ(value.numValue, 9.0);
+}
+
+TEST(Evaluator, EvalIfEmptyConsequenceIsNull) {
+  Value value = eval("if (true) { }");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Null));
+}
+
+TEST(Evaluator, EvalIfEmptyAlternativeIsNull) {
+  Value value = eval("if (false) { 1; } else { }");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Null));
+}
+
+TEST(Evaluator, EvalIfElseStringResult) {
+  Value value = eval("if (false) { \"a\"; } else { \"b\"; }");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::String));
+  EXPECT_EQ(value.strValue, "b");
+}
+
+TEST(Evaluator, EvalIfElseBooleanResult) {
+  Value value = eval("if (false) { true; } else { false; }");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Bool));
+  EXPECT_FALSE(value.boolValue);
+}
+
+TEST(Evaluator, EvalIfElseWithVariableCondition) {
+  Value value = eval("var x = 5; if (x > 3) { 10; } else { 20; }");
+
+  EXPECT_DOUBLE_EQ(value.numValue, 10.0);
+}
+
+TEST(Evaluator, EvalIfElseAlternativeWithVariableCondition) {
+  Value value = eval("var x = 1; if (x > 3) { 10; } else { 20; }");
+
+  EXPECT_DOUBLE_EQ(value.numValue, 20.0);
+}
+
+TEST(Evaluator, EvalIfElseVarBindingInAlternativeIsVisibleOutside) {
+  Value value = eval("if (false) { var x = 1; } else { var x = 2; } x;");
+
+  EXPECT_DOUBLE_EQ(value.numValue, 2.0);
+}
+
+TEST(Evaluator, EvalIfElseErrorInAlternativeIsReturned) {
+  Value value = eval("if (false) { 1; } else { -true; }");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "unknown operator: -Bool");
+}
+
+TEST(Evaluator, EvalIfElseUnboundConditionIsError) {
+  Value value = eval("if (nope) { 1; } else { 2; }");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "identifier not found: nope");
+}
+
+TEST(Evaluator, EvalIfElseReturnInsideAlternative) {
+  Value value = eval("if (false) { 1; } else { return 5; 6; }");
+
+  EXPECT_DOUBLE_EQ(value.numValue, 5.0);
+}
+
+TEST(Evaluator, EvalIfElseFollowedByStatement) {
+  Value value = eval("if (true) { 1; } else { 2; } 3;");
+
+  EXPECT_DOUBLE_EQ(value.numValue, 3.0);
+}
+
+TEST(Evaluator, EvalNestedIfElseInConsequence) {
+  Value value = eval("if (true) { if (false) { 1; } else { 2; } } else { 3; }");
+
+  EXPECT_DOUBLE_EQ(value.numValue, 2.0);
+}
+
+TEST(Evaluator, EvalNestedIfElseInAlternative) {
+  Value value = eval("if (false) { 1; } else { if (true) { 2; } else { 3; } }");
+
+  EXPECT_DOUBLE_EQ(value.numValue, 2.0);
+}
+
+TEST(Evaluator, EvalIfElseInsideFunctionBody) {
+  Value value = eval("var f = fn(x) { if (x > 0) { 1; } else { 0; } }; f(5);");
+
+  EXPECT_DOUBLE_EQ(value.numValue, 1.0);
+}
+
+TEST(Evaluator, EvalIfElseInsideFunctionBodyAlternative) {
+  Value value = eval("var f = fn(x) { if (x > 0) { 1; } else { 0; } }; f(-5);");
+
+  EXPECT_DOUBLE_EQ(value.numValue, 0.0);
+}
+
+TEST(Evaluator, EvalIfElseIfFirstBranch) {
+  Value value = eval("if (true) { 1; } else if (true) { 2; } else { 3; }");
+
+  EXPECT_DOUBLE_EQ(value.numValue, 1.0);
+}
+
+TEST(Evaluator, EvalIfElseIfSecondBranch) {
+  Value value = eval("if (false) { 1; } else if (true) { 2; } else { 3; }");
+
+  EXPECT_DOUBLE_EQ(value.numValue, 2.0);
+}
+
+TEST(Evaluator, EvalIfElseIfFinalElse) {
+  Value value = eval("if (false) { 1; } else if (false) { 2; } else { 3; }");
+
+  EXPECT_DOUBLE_EQ(value.numValue, 3.0);
+}
+
+TEST(Evaluator, EvalIfElseIfWithoutFinalElseIsNull) {
+  Value value = eval("if (false) { 1; } else if (false) { 2; }");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Null));
+}
+
+TEST(Evaluator, EvalIfElseIfChainThirdBranch) {
+  Value value = eval("if (false) { 1; } else if (false) { 2; } else if (true) "
+                     "{ 3; } else { 4; }");
+
+  EXPECT_DOUBLE_EQ(value.numValue, 3.0);
+}
+
+TEST(Evaluator, EvalIfElseIfChainComparisons) {
+  Value value = eval("var x = 5; if (x < 0) { \"neg\"; } else if (x == 0) { "
+                     "\"zero\"; } else { \"pos\"; }");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::String));
+  EXPECT_EQ(value.strValue, "pos");
+}
+
+TEST(Evaluator, EvalIfElseIfErrorConditionIsReturned) {
+  Value value = eval("if (false) { 1; } else if (-true) { 2; } else { 3; }");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "unknown operator: -Bool");
+}
+
+TEST(Evaluator, EvalIfElseIfBranchMultipleStatements) {
+  Value value = eval("if (false) { 1; } else if (true) { 2; 3; } else { 4; }");
+
+  EXPECT_DOUBLE_EQ(value.numValue, 3.0);
+}
+
 TEST(Evaluator, EvalVarStatementReturnsInitializerValue) {
   Value value = eval("var x = 5;");
 
