@@ -285,8 +285,11 @@ Value Evaluator::evalBuiltinFuncs(std::string funcName,
       return args[0];
     }
     std::string printedString;
-    for (const Value &arg : args) {
-      printedString += inspect(arg);
+    for (size_t indx = 0; indx < args.size(); indx++) {
+      if (indx > 0) {
+        printedString += " ";
+      }
+      printedString += inspect(args[indx]);
     }
     std::println("{}", printedString);
     return {};

@@ -1281,8 +1281,8 @@ TEST(Evaluator, EvalBuiltinPrintWithoutArgs) {
   EXPECT_EQ(evalOutput("print();"), "\n");
 }
 
-TEST(Evaluator, EvalBuiltinPrintConcatenatesArgs) {
-  EXPECT_EQ(evalOutput("print(\"a\", 1, false);"), "a1false\n");
+TEST(Evaluator, EvalBuiltinPrintSeparatesArgsWithSpace) {
+  EXPECT_EQ(evalOutput("print(\"a\", 1, false);"), "a 1 false\n");
 }
 
 TEST(Evaluator, EvalBuiltinPrintEvaluatesArgs) {
