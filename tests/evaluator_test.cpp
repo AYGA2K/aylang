@@ -746,18 +746,84 @@ TEST(Evaluator, EvalHashAddNumberIsError) {
   EXPECT_EQ(value.strValue, "unknown operator: HashMap + Number");
 }
 
-TEST(Evaluator, EvalHashIndexIsError) {
+TEST(Evaluator, EvalHashIndexStringKey) {
   Value value = eval("var h = {\"a\": 1}; h[\"a\"];");
 
-  ASSERT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
-  EXPECT_EQ(value.strValue, "index must be a number");
+  ASSERT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.numValue, 1.0);
 }
 
-TEST(Evaluator, EvalHashIndexNumericIsError) {
+TEST(Evaluator, EvalHashIndexNumberKey) {
+  Value value = eval("var h = {1: \"one\", 2: \"two\"}; h[2];");
+
+  ASSERT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::String));
+  EXPECT_EQ(value.strValue, "two");
+}
+
+TEST(Evaluator, EvalHashIndexBoolKey) {
+  Value value = eval("var h = {true: \"yes\", false: \"no\"}; h[false];");
+
+  ASSERT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::String));
+  EXPECT_EQ(value.strValue, "no");
+}
+
+TEST(Evaluator, EvalHashIndexSecondPair) {
+  Value value = eval("var h = {\"a\": 1, \"b\": 2}; h[\"b\"];");
+
+  ASSERT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.numValue, 2.0);
+}
+
+TEST(Evaluator, EvalHashIndexMissingKeyIsNull) {
+  Value value = eval("var h = {\"a\": 1}; h[\"b\"];");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Null));
+}
+
+TEST(Evaluator, EvalHashIndexWrongKeyKindIsNull) {
   Value value = eval("var h = {\"a\": 1}; h[0];");
 
-  ASSERT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
-  EXPECT_EQ(value.strValue, "variable is not an array");
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Null));
+}
+
+TEST(Evaluator, EvalHashIndexEmptyHashIsNull) {
+  Value value = eval("var h = {}; h[\"a\"];");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Null));
+}
+
+TEST(Evaluator, EvalHashIndexWithBinaryKey) {
+  Value value = eval("var h = {2: \"two\"}; h[1 + 1];");
+
+  ASSERT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::String));
+  EXPECT_EQ(value.strValue, "two");
+}
+
+TEST(Evaluator, EvalHashIndexNestedHash) {
+  Value value = eval("var h = {\"a\": {\"b\": 3}}; h[\"a\"];");
+
+  ASSERT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::HashMap));
+  ASSERT_EQ(value.values.size(), 2u);
+  EXPECT_DOUBLE_EQ(value.values[1]->numValue, 3.0);
+}
+
+TEST(Evaluator, EvalHashIndexErrorKeyPropagates) {
+  Value value = eval("var h = {\"a\": 1}; h[undefinedVar];");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+}
+
+TEST(Evaluator, EvalIndexOnUndefinedVariableIsError) {
+  Value value = eval("undefinedVar[0];");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+}
+
+TEST(Evaluator, EvalIndexOnStringIsError) {
+  Value value = eval("var s = \"abc\"; s[0];");
+
+  EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(value.strValue, "variable is not an array or a hashmap");
 }
 
 TEST(Evaluator, EvalArrayIndexReturnsElement) {
@@ -792,7 +858,7 @@ TEST(Evaluator, EvalArrayIndexOnNonArrayIsError) {
   Value value = eval("var notArr = 5; notArr[0];");
 
   EXPECT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
-  EXPECT_EQ(value.strValue, "variable is not an array");
+  EXPECT_EQ(value.strValue, "variable is not an array or a hashmap");
 }
 
 TEST(Evaluator, EvalArrayIndexNonNumberIsError) {
@@ -1306,11 +1372,25 @@ TEST(Evaluator, EvalBuiltinPrintArrayOfHashes) {
   EXPECT_EQ(evalOutput("print([{\"a\": 1}]);"), "[{a:1}]\n");
 }
 
-TEST(Evaluator, EvalBuiltinLenHashIsError) {
+TEST(Evaluator, EvalBuiltinLenHash) {
   Value value = eval("len({\"a\": 1});");
 
-  ASSERT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Error));
-  EXPECT_EQ(value.strValue, "argument to len is not supported: HashMap");
+  ASSERT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.numValue, 1.0);
+}
+
+TEST(Evaluator, EvalBuiltinLenHashMultiplePairs) {
+  Value value = eval("len({\"a\": 1, \"b\": 2, \"c\": 3});");
+
+  ASSERT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.numValue, 3.0);
+}
+
+TEST(Evaluator, EvalBuiltinLenEmptyHash) {
+  Value value = eval("len({});");
+
+  ASSERT_EQ(static_cast<int>(value.kind), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.numValue, 0.0);
 }
 
 TEST(Evaluator, EvalBuiltinPushHashIsError) {

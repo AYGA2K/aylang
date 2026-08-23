@@ -44,4 +44,5 @@ bool isString(const Value &value);
 bool isBool(const Value &value);
 bool isNull(const Value &value);
 bool isArray(const Value &value);
+bool isHashMap(const Value &value);
 bool isFunction(const Value &value);

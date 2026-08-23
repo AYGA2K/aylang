@@ -74,7 +74,7 @@ Value Evaluator::evalExpression(int index, std::shared_ptr<Environment> env) {
   case ExpressionKind::LITERAL_ARRAY:
     return evalArray(index, env);
   case ExpressionKind::INDEX:
-    return evalArrayIndex(index, env);
+    return evalIndex(index, env);
   case ExpressionKind::LITERAL_HASH:
     return evalHashMap(index, env);
   case ExpressionKind::STAR:
@@ -301,17 +301,25 @@ Value Evaluator::evalBuiltinFuncs(std::string funcName,
     if (args.size() == 1 && isError(args[0])) {
       return args[0];
     }
-    if (!isString(args[0]) && !isArray(args[0])) {
-      std::string message = "argument to len is not supported: " +
-                            valueKindToString(args[0].kind);
+    const Value arg = args[0];
+    if (!isString(arg) && !isArray(arg) && !isHashMap(arg)) {
+      std::string message =
+          "argument to len is not supported: " + valueKindToString(arg.kind);
       return Value{.kind = ValueKind::Error, .strValue = message};
     }
-    if (isString(args[0])) {
+    if (isString(arg)) {
       return Value{.kind = ValueKind::Number,
-                   .numValue = static_cast<double>(args[0].strValue.size())};
+                   .numValue = static_cast<double>(arg.strValue.size())};
     }
+
+    if (isHashMap(arg)) {
+      int length = arg.values.size() / 2;
+      return Value{.kind = ValueKind::Number,
+                   .numValue = static_cast<double>(length)};
+    }
+
     return Value{.kind = ValueKind::Number,
-                 .numValue = static_cast<double>(args[0].values.size())};
+                 .numValue = static_cast<double>(arg.values.size())};
   }
   if (funcName == "push") {
     if (argExprIndexes.size() != 2) {
@@ -385,12 +393,27 @@ Value Evaluator::evalHashMap(int index, std::shared_ptr<Environment> env) {
   return value;
 }
 
-Value Evaluator::evalArrayIndex(int index, std::shared_ptr<Environment> env) {
+Value Evaluator::evalIndex(int index, std::shared_ptr<Environment> env) {
   Expression indexexpr = parserResult.expressions[index];
+  Value indexed = env->get(indexexpr.literal);
+  if (isError(indexed)) {
+    return indexed;
+  }
   Value indexValue = evalExpression(indexexpr.subExprIndex, env);
   if (isError(indexValue)) {
     return indexValue;
   }
+  if (isArray(indexed)) {
+    return evalArrayIndex(indexed, indexValue);
+  }
+  if (isHashMap(indexed)) {
+    return evalHashMapIndex(indexed, indexValue);
+  }
+  return Value{.kind = ValueKind::Error,
+               .strValue = "variable is not an array or a hashmap"};
+}
+
+Value Evaluator::evalArrayIndex(const Value &array, const Value &indexValue) {
   if (!isNumber(indexValue)) {
     return Value{.kind = ValueKind::Error,
                  .strValue = "index must be a number"};
@@ -400,15 +423,19 @@ Value Evaluator::evalArrayIndex(int index, std::shared_ptr<Environment> env) {
                  .strValue = "index must be greater or equal than zero"};
   }
   size_t arrIndex = indexValue.numValue;
-  Value array = env->get(indexexpr.literal);
-  if (!isArray(array)) {
-    return Value{.kind = ValueKind::Error,
-                 .strValue = "variable is not an array"};
-  }
   if (arrIndex >= array.values.size()) {
     return Value{.kind = ValueKind::Error,
                  .strValue = "index is bigger than array size"};
   }
-  Value value = *array.values[arrIndex];
-  return value;
+  return *array.values[arrIndex];
+}
+
+Value Evaluator::evalHashMapIndex(const Value &hashMap,
+                                  const Value &keyValue) {
+  for (size_t indx = 0; indx + 1 < hashMap.values.size(); indx += 2) {
+    if (compare(BinaryOperator::EQUAL, *hashMap.values[indx], keyValue)) {
+      return *hashMap.values[indx + 1];
+    }
+  }
+  return {};
 }
