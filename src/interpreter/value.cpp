@@ -2,50 +2,121 @@
 #include <cstddef>
 #include <format>
 #include <string>
+#include <utility>
+#include <vector>
+
+Value makeString(std::string chars) {
+  ObjString *obj = new ObjString();
+  obj->kind = ObjKind::String;
+  obj->chars = std::move(chars);
+  return makeObj(obj);
+}
+
+Value makeError(std::string message) {
+  ObjError *obj = new ObjError();
+  obj->kind = ObjKind::Error;
+  obj->message = std::move(message);
+  return makeObj(obj);
+}
+
+Value makeArray(std::vector<Value> items) {
+  ObjArray *obj = new ObjArray();
+  obj->kind = ObjKind::Array;
+  obj->items = std::move(items);
+  return makeObj(obj);
+}
+
+Value makeHashMap(std::vector<Value> entries) {
+  ObjHashMap *obj = new ObjHashMap();
+  obj->kind = ObjKind::HashMap;
+  obj->entries = std::move(entries);
+  return makeObj(obj);
+}
+
+Value makeFunction(const std::vector<std::string> &parameters,
+                   int bodyStmtIndex, ObjEnv *env) {
+  ObjFunction *obj = new ObjFunction();
+  obj->kind = ObjKind::Function;
+  obj->parameters = parameters;
+  obj->bodyStmtIndex = bodyStmtIndex;
+  obj->env = env;
+  return makeObj(obj);
+}
+
+ValueKind kindOf(const Value &value) {
+  switch (value.tag) {
+  case Tag::Null:
+    return ValueKind::Null;
+  case Tag::Number:
+    return ValueKind::Number;
+  case Tag::Bool:
+    return ValueKind::Bool;
+  case Tag::Obj:
+    break;
+  }
+  switch (value.obj->kind) {
+  case ObjKind::String:
+    return ValueKind::String;
+  case ObjKind::Error:
+    return ValueKind::Error;
+  case ObjKind::Array:
+    return ValueKind::Array;
+  case ObjKind::HashMap:
+    return ValueKind::HashMap;
+  case ObjKind::Function:
+    return ValueKind::Function;
+  case ObjKind::Env:
+    break;
+  }
+  return ValueKind::Null;
+}
 
 static std::string buildArrString(const Value &value) {
+  const std::vector<Value> &items = asArray(value)->items;
   std::string format = "[";
-  for (size_t i = 0; i < value.values.size(); i++) {
+  for (size_t i = 0; i < items.size(); i++) {
     if (i > 0) {
       format += ",";
     }
-    format += inspect(*value.values[i]);
+    format += inspect(items[i]);
   }
   format += "]";
   return format;
 }
+
 static std::string buildHashMapString(const Value &value) {
+  const std::vector<Value> &entries = asHashMap(value)->entries;
   std::string format = "{";
-  for (size_t indx = 0; indx < value.values.size(); indx += 2) {
-    format += inspect(*value.values[indx]);
+  for (size_t indx = 0; indx < entries.size(); indx += 2) {
+    format += inspect(entries[indx]);
     format += ":";
-    format += inspect(*value.values[indx + 1]);
-    if (indx < value.values.size() - 2) {
+    format += inspect(entries[indx + 1]);
+    if (indx < entries.size() - 2) {
       format += ",";
     }
   }
   format += "}";
   return format;
 }
+
 std::string inspect(const Value &value) {
-  switch (value.kind) {
+  switch (kindOf(value)) {
   case ValueKind::Number:
-    return std::format("{}", value.numValue);
+    return std::format("{}", value.num);
   case ValueKind::String:
+    return asString(value)->chars;
   case ValueKind::Error:
-    return value.strValue;
+    return asError(value)->message;
   case ValueKind::Bool:
-    return value.boolValue ? "true" : "false";
+    return value.boolean ? "true" : "false";
   case ValueKind::Null:
     return "null";
   case ValueKind::Array:
     return buildArrString(value);
-  case ValueKind::BUILTIN:
   case ValueKind::Function:
     break;
   case ValueKind::HashMap:
     return buildHashMapString(value);
-    break;
   }
   return "null";
 }
@@ -63,24 +134,20 @@ std::string valueKindToString(ValueKind kind) {
   case ValueKind::Error:
     return "Error";
   case ValueKind::Function:
-  case ValueKind::BUILTIN:
     return "Function";
   case ValueKind::Array:
     return "Array";
   case ValueKind::HashMap:
     return "HashMap";
-    break;
   }
   return "Unknown";
 }
 
 // Booleans compare as numbers: false is 0, true is 1.
-bool isNumeric(const Value &value) {
-  return value.kind == ValueKind::Number || value.kind == ValueKind::Bool;
-}
+bool isNumeric(const Value &value) { return isNumber(value) || isBool(value); }
 
 double asNumber(const Value &value) {
-  return value.kind == ValueKind::Bool ? value.boolValue : value.numValue;
+  return isBool(value) ? value.boolean : value.num;
 }
 
 template <typename T>
@@ -108,11 +175,12 @@ bool compare(BinaryOperator oper, const Value &leftValue,
   if (isNumeric(leftValue) && isNumeric(rightValue)) {
     return compareOrdered(oper, asNumber(leftValue), asNumber(rightValue));
   }
-  if (leftValue.kind != rightValue.kind) {
+  if (kindOf(leftValue) != kindOf(rightValue)) {
     return false;
   }
   if (isString(leftValue)) {
-    return compareOrdered(oper, leftValue.strValue, rightValue.strValue);
+    return compareOrdered(oper, asString(leftValue)->chars,
+                          asString(rightValue)->chars);
   }
   if (isNull(leftValue)) {
     return true;
@@ -124,26 +192,8 @@ bool isTruthy(const Value &value) {
   if (isNull(value)) {
     return false;
   }
-  if (isBool(value) && !value.boolValue) {
+  if (isBool(value) && !value.boolean) {
     return false;
   }
   return true;
-}
-
-bool isError(const Value &value) { return value.kind == ValueKind::Error; }
-
-bool isNumber(const Value &value) { return value.kind == ValueKind::Number; }
-
-bool isString(const Value &value) { return value.kind == ValueKind::String; }
-
-bool isBool(const Value &value) { return value.kind == ValueKind::Bool; }
-
-bool isNull(const Value &value) { return value.kind == ValueKind::Null; }
-
-bool isArray(const Value &value) { return value.kind == ValueKind::Array; }
-
-bool isHashMap(const Value &value) { return value.kind == ValueKind::HashMap; }
-
-bool isFunction(const Value &value) {
-  return value.kind == ValueKind::Function;
 }

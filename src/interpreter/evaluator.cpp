@@ -4,10 +4,11 @@
 #include "parser/expression.h"
 #include "parser/parser.h"
 #include "parser/statement.h"
+#include <array>
 #include <cstddef>
-#include <memory>
 #include <print>
 #include <string>
+#include <utility>
 #include <vector>
 
 inline constexpr std::array<std::string, 3> builtinFuncs = {"print", "len",
@@ -39,17 +40,17 @@ Value Evaluator::evalStatements(size_t fromProgramStatement) {
   return result;
 }
 
-Value Evaluator::evalExpression(int index, std::shared_ptr<Environment> env) {
+Value Evaluator::evalExpression(int index, ObjEnv *env) {
   // A statement that failed to parse holds no expression
   if (index == -1) {
-    return Value{.kind = ValueKind::Error, .strValue = "invalid expression"};
+    return makeError("invalid expression");
   }
   const Expression &expr = parserResult.expressions[index];
   switch (expr.kind) {
   case ExpressionKind::LITERAL_NUMBER:
-    return Value{.kind = ValueKind::Number, .numValue = expr.numValue};
+    return makeNumber(expr.numValue);
   case ExpressionKind::LITERAL_BOOL:
-    return Value{.kind = ValueKind::Bool, .boolValue = expr.boolValue};
+    return makeBool(expr.boolValue);
   case ExpressionKind::UNARY: {
     Value value = evalExpression(expr.subExprIndex, env);
     return evalPrefixExpression(expr.unaryOperator, value);
@@ -60,10 +61,10 @@ Value Evaluator::evalExpression(int index, std::shared_ptr<Environment> env) {
     return evalInfixExpression(expr.binaryOperator, left, right);
   }
   case ExpressionKind::LITERAL_STRING:
-    return Value{.kind = ValueKind::String, .strValue = expr.literal};
+    return makeString(expr.literal);
 
   case ExpressionKind::IDENTIFIER: {
-    return env->get(expr.literal);
+    return envGet(env, expr.literal);
   }
   case ExpressionKind::FUNCTION:
     return evalFunctionExpression(expr.literal, expr.parameters,
@@ -83,9 +84,9 @@ Value Evaluator::evalExpression(int index, std::shared_ptr<Environment> env) {
   return {};
 }
 
-Value Evaluator::evalStatement(int index, std::shared_ptr<Environment> env) {
+Value Evaluator::evalStatement(int index, ObjEnv *env) {
   if (index == -1) {
-    return Value{.kind = ValueKind::Error, .strValue = "invalid statement"};
+    return makeError("invalid statement");
   }
   const Statement &stmt = parserResult.statements[index];
   switch (stmt.kind) {
@@ -105,16 +106,16 @@ Value Evaluator::evalStatement(int index, std::shared_ptr<Environment> env) {
 
 Value Evaluator::evalPrefixExpression(UnaryOperator oper, Value &value) {
   if (oper == UnaryOperator::NEGATE && isNumber(value)) {
-    value.numValue = -value.numValue;
+    value.num = -value.num;
     return value;
   }
   if (oper == UnaryOperator::NOT && isBool(value)) {
-    value.boolValue = !value.boolValue;
+    value.boolean = !value.boolean;
     return value;
   }
   std::string message = "unknown operator: " + unaryOperatorToString(oper) +
-                        valueKindToString(value.kind);
-  return Value{.kind = ValueKind::Error, .strValue = message};
+                        valueKindToString(kindOf(value));
+  return makeError(message);
 }
 
 Value Evaluator::evalInfixExpression(BinaryOperator oper,
@@ -127,8 +128,7 @@ Value Evaluator::evalInfixExpression(BinaryOperator oper,
   case BinaryOperator::LESS_THAN_OR_EQUAL:
   case BinaryOperator::GREATER_THAN:
   case BinaryOperator::GREATER_THAN_OR_EQUAL:
-    return Value{.kind = ValueKind::Bool,
-                 .boolValue = compare(oper, leftValue, rightValue)};
+    return makeBool(compare(oper, leftValue, rightValue));
   case BinaryOperator::AND:
   case BinaryOperator::OR:
     if (isNumeric(leftValue) && isNumeric(rightValue)) {
@@ -136,7 +136,7 @@ Value Evaluator::evalInfixExpression(BinaryOperator oper,
       bool left = asNumber(leftValue) != 0;
       bool right = asNumber(rightValue) != 0;
       bool result = oper == BinaryOperator::AND ? left && right : left || right;
-      return Value{.kind = ValueKind::Bool, .boolValue = result};
+      return makeBool(result);
     }
     break;
   case BinaryOperator::ADD:
@@ -147,43 +147,45 @@ Value Evaluator::evalInfixExpression(BinaryOperator oper,
       double left = asNumber(leftValue);
       double right = asNumber(rightValue);
       if (oper == BinaryOperator::ADD) {
-        return Value{.kind = ValueKind::Number, .numValue = left + right};
+        return makeNumber(left + right);
       }
 
       if (oper == BinaryOperator::SUBTRACT) {
-        return Value{.kind = ValueKind::Number, .numValue = left - right};
+        return makeNumber(left - right);
       }
 
       if (oper == BinaryOperator::MULTIPLY) {
-        return Value{.kind = ValueKind::Number, .numValue = left * right};
+        return makeNumber(left * right);
       }
 
       if (oper == BinaryOperator::DIVIDE) {
-        return Value{.kind = ValueKind::Number, .numValue = left / right};
+        return makeNumber(left / right);
       }
     }
     if (oper == BinaryOperator::ADD && isString(leftValue) &&
         isString(rightValue)) {
-      return Value{.kind = ValueKind::String,
-                   .strValue = leftValue.strValue + rightValue.strValue};
+      return makeString(asString(leftValue)->chars +
+                        asString(rightValue)->chars);
     }
 
     if (oper == BinaryOperator::ADD && isArray(leftValue) &&
         isArray(rightValue)) {
-      auto values = leftValue.values;
-      values.insert(values.end(), rightValue.values.begin(),
-                    rightValue.values.end());
-      return Value{.kind = ValueKind::Array, .values = values};
+      // Concatenation builds a fresh array, so neither operand is mutated.
+      std::vector<Value> items = asArray(leftValue)->items;
+      const std::vector<Value> &rightItems = asArray(rightValue)->items;
+      items.insert(items.end(), rightItems.begin(), rightItems.end());
+      return makeArray(std::move(items));
     }
     break;
   }
   std::string message =
-      "unknown operator: " + valueKindToString(leftValue.kind) + " " +
-      binaryOperatorToString(oper) + " " + valueKindToString(rightValue.kind);
-  return Value{.kind = ValueKind::Error, .strValue = message};
+      "unknown operator: " + valueKindToString(kindOf(leftValue)) + " " +
+      binaryOperatorToString(oper) + " " +
+      valueKindToString(kindOf(rightValue));
+  return makeError(message);
 }
 
-Value Evaluator::evalIfStatement(int index, std::shared_ptr<Environment> env) {
+Value Evaluator::evalIfStatement(int index, ObjEnv *env) {
   const Statement &stmt = parserResult.statements[index];
   Value conditionValue = evalExpression(stmt.conditionExprIndex, env);
   if (isError(conditionValue)) {
@@ -198,8 +200,7 @@ Value Evaluator::evalIfStatement(int index, std::shared_ptr<Environment> env) {
   return {};
 }
 
-Value Evaluator::evalBlockStatement(int index,
-                                    std::shared_ptr<Environment> env) {
+Value Evaluator::evalBlockStatement(int index, ObjEnv *env) {
   const Statement &stmt = parserResult.statements[index];
   Value returnedValue;
   for (int index : stmt.statementsIndexes) {
@@ -212,35 +213,31 @@ Value Evaluator::evalBlockStatement(int index,
   return returnedValue;
 }
 
-Value Evaluator::evalVarStatement(int index, std::shared_ptr<Environment> env) {
+Value Evaluator::evalVarStatement(int index, ObjEnv *env) {
   const Statement &stmt = parserResult.statements[index];
   // If the variable has no initializer it gets null as value
   if (stmt.expressionIndex < 0) {
-    env->set(stmt.name, Value{});
+    envSet(env, stmt.name, makeNull());
     return {};
   }
   Value val = evalExpression(stmt.expressionIndex, env);
-  env->set(stmt.name, val);
+  envSet(env, stmt.name, val);
   return val;
 }
 
 Value Evaluator::evalFunctionExpression(
     const std::string &name, const std::vector<std::string> &parameters,
-    int bodyStmtIndex, std::shared_ptr<Environment> env) {
-  Value value;
-  value.kind = ValueKind::Function;
-  value.parameters = parameters;
-  value.bodyStmtIndex = bodyStmtIndex;
-  value.env = env;
+    int bodyStmtIndex, ObjEnv *env) {
+  Value value = makeFunction(parameters, bodyStmtIndex, env);
   if (!name.empty()) {
-    env->set(name, value);
+    envSet(env, name, value);
   }
   return value;
 }
 
 std::vector<Value>
 Evaluator::evalExpressions(const std::vector<int> &argExprIndexes,
-                           std::shared_ptr<Environment> env) {
+                           ObjEnv *env) {
   std::vector<Value> result;
   for (int index : argExprIndexes) {
     Value value = evalExpression(index, env);
@@ -253,32 +250,34 @@ Evaluator::evalExpressions(const std::vector<int> &argExprIndexes,
 }
 
 // We get the function's environment and give the params values from the args
-std::shared_ptr<Environment> extendFunctionEnv(Value &function,
-                                               std::vector<Value> &args) {
-  // Using function.env instead of the caller's env is what makes closures work
-  auto env = newEnclosedEnvironment(function.env);
+ObjEnv *extendFunctionEnv(Value &function, std::vector<Value> &args) {
+  ObjFunction *fn = asFunction(function);
+  // Using the function's env instead of the caller's is what makes closures
+  // work
+  ObjEnv *env = newEnclosedEnvironment(fn->env);
   for (size_t i = 0; i < args.size(); i++) {
     // Map the function parameters to their values from the arguments
-    env->set(function.parameters[i], args[i]);
+    envSet(env, fn->parameters[i], args[i]);
   }
   return env;
 }
 
 Value Evaluator::applyFunction(Value &function, std::vector<Value> &args) {
-  if (function.parameters.size() != args.size()) {
+  ObjFunction *fn = asFunction(function);
+  if (fn->parameters.size() != args.size()) {
     std::string message = "wrong number of arguments: got " +
                           std::to_string(args.size()) + ", want " +
-                          std::to_string(function.parameters.size());
-    return Value{.kind = ValueKind::Error, .strValue = message};
+                          std::to_string(fn->parameters.size());
+    return makeError(message);
   }
-  auto extendedEnv = extendFunctionEnv(function, args);
-  Value evaluted = evalStatement(function.bodyStmtIndex, extendedEnv);
+  ObjEnv *extendedEnv = extendFunctionEnv(function, args);
+  Value evaluted = evalStatement(fn->bodyStmtIndex, extendedEnv);
   return evaluted;
 }
 
 Value Evaluator::evalBuiltinFuncs(std::string funcName,
                                   const std::vector<int> &argExprIndexes,
-                                  std::shared_ptr<Environment> env) {
+                                  ObjEnv *env) {
   if (funcName == "print") {
     std::vector<Value> args = evalExpressions(argExprIndexes, env);
     if (args.size() == 1 && isError(args[0])) {
@@ -298,7 +297,7 @@ Value Evaluator::evalBuiltinFuncs(std::string funcName,
     if (argExprIndexes.size() != 1) {
       std::string message = "wrong number of arguments: got " +
                             std::to_string(argExprIndexes.size()) + ", want 1";
-      return Value{.kind = ValueKind::Error, .strValue = message};
+      return makeError(message);
     }
     std::vector<Value> args = evalExpressions(argExprIndexes, env);
     if (args.size() == 1 && isError(args[0])) {
@@ -307,70 +306,65 @@ Value Evaluator::evalBuiltinFuncs(std::string funcName,
     const Value arg = args[0];
     if (!isString(arg) && !isArray(arg) && !isHashMap(arg)) {
       std::string message =
-          "argument to len is not supported: " + valueKindToString(arg.kind);
-      return Value{.kind = ValueKind::Error, .strValue = message};
+          "argument to len is not supported: " + valueKindToString(kindOf(arg));
+      return makeError(message);
     }
     if (isString(arg)) {
-      return Value{.kind = ValueKind::Number,
-                   .numValue = static_cast<double>(arg.strValue.size())};
+      return makeNumber(static_cast<double>(asString(arg)->chars.size()));
     }
 
     if (isHashMap(arg)) {
-      int length = arg.values.size() / 2;
-      return Value{.kind = ValueKind::Number,
-                   .numValue = static_cast<double>(length)};
+      size_t length = asHashMap(arg)->entries.size() / 2;
+      return makeNumber(static_cast<double>(length));
     }
 
-    return Value{.kind = ValueKind::Number,
-                 .numValue = static_cast<double>(arg.values.size())};
+    return makeNumber(static_cast<double>(asArray(arg)->items.size()));
   }
   if (funcName == "push") {
     if (argExprIndexes.size() != 2) {
       std::string message = "wrong number of arguments: got " +
                             std::to_string(argExprIndexes.size()) + ", want 2";
-      return Value{.kind = ValueKind::Error, .strValue = message};
+      return makeError(message);
     }
     const Expression &arrayExpr = parserResult.expressions[argExprIndexes[0]];
     if (arrayExpr.kind != ExpressionKind::IDENTIFIER) {
-      return Value{.kind = ValueKind::Error,
-                   .strValue = "first argument to push must be an identifier"};
+      return makeError("first argument to push must be an identifier");
     }
-    Value array = env->get(arrayExpr.literal);
+    Value array = envGet(env, arrayExpr.literal);
     if (isError(array)) {
       return array;
     }
     if (!isArray(array)) {
-      std::string message =
-          "argument to push is not an array: " + valueKindToString(array.kind);
-      return Value{.kind = ValueKind::Error, .strValue = message};
+      std::string message = "argument to push is not an array: " +
+                            valueKindToString(kindOf(array));
+      return makeError(message);
     }
     Value pushedValue = evalExpression(argExprIndexes[1], env);
     if (isError(pushedValue)) {
       return pushedValue;
     }
-    auto pushedVal = std::make_shared<Value>(pushedValue);
-    array.values.push_back(pushedVal);
-    env->set(arrayExpr.literal, array);
-    return *pushedVal;
+    asArray(array)->items.push_back(pushedValue);
+    return pushedValue;
   }
   return {};
 }
+
 Value Evaluator::evalCallExpression(int functionExprIndex,
                                     const std::vector<int> &argExprIndexes,
-                                    std::shared_ptr<Environment> env) {
+                                    ObjEnv *env) {
   const std::string funcName =
       parserResult.expressions[functionExprIndex].literal;
   if (isBuiltIn(funcName)) {
     return evalBuiltinFuncs(funcName, argExprIndexes, env);
   }
-  Value function = env->get(funcName);
+  Value function = envGet(env, funcName);
   if (isError(function)) {
     return function;
   }
   if (!isFunction(function)) {
     std::string message =
-        funcName + " is not a function: " + valueKindToString(function.kind);
-    return Value{.kind = ValueKind::Error, .strValue = message};
+        funcName + " is not a function: " + valueKindToString(kindOf(function));
+    return makeError(message);
   }
   std::vector<Value> args = evalExpressions(argExprIndexes, env);
   if (args.size() == 1 && isError(args[0])) {
@@ -379,26 +373,27 @@ Value Evaluator::evalCallExpression(int functionExprIndex,
   return applyFunction(function, args);
 }
 
-Value Evaluator::evalArray(int index, std::shared_ptr<Environment> env) {
+Value Evaluator::evalArray(int index, ObjEnv *env) {
   Expression expr = parserResult.expressions[index];
-  Value value{.kind = ValueKind::Array};
+  std::vector<Value> items;
   for (int indx : expr.expressionsIndexes) {
-    value.values.push_back(std::make_shared<Value>(evalExpression(indx, env)));
+    items.push_back(evalExpression(indx, env));
   }
-  return value;
-}
-Value Evaluator::evalHashMap(int index, std::shared_ptr<Environment> env) {
-  Expression expr = parserResult.expressions[index];
-  Value value{.kind = ValueKind::HashMap};
-  for (int indx : expr.expressionsIndexes) {
-    value.values.push_back(std::make_shared<Value>(evalExpression(indx, env)));
-  }
-  return value;
+  return makeArray(std::move(items));
 }
 
-Value Evaluator::evalIndex(int index, std::shared_ptr<Environment> env) {
+Value Evaluator::evalHashMap(int index, ObjEnv *env) {
+  Expression expr = parserResult.expressions[index];
+  std::vector<Value> entries;
+  for (int indx : expr.expressionsIndexes) {
+    entries.push_back(evalExpression(indx, env));
+  }
+  return makeHashMap(std::move(entries));
+}
+
+Value Evaluator::evalIndex(int index, ObjEnv *env) {
   Expression indexexpr = parserResult.expressions[index];
-  Value indexed = env->get(indexexpr.literal);
+  Value indexed = envGet(env, indexexpr.literal);
   if (isError(indexed)) {
     return indexed;
   }
@@ -412,32 +407,29 @@ Value Evaluator::evalIndex(int index, std::shared_ptr<Environment> env) {
   if (isHashMap(indexed)) {
     return evalHashMapIndex(indexed, indexValue);
   }
-  return Value{.kind = ValueKind::Error,
-               .strValue = "variable is not an array or a hashmap"};
+  return makeError("variable is not an array or a hashmap");
 }
 
 Value Evaluator::evalArrayIndex(const Value &array, const Value &indexValue) {
   if (!isNumber(indexValue)) {
-    return Value{.kind = ValueKind::Error,
-                 .strValue = "index must be a number"};
+    return makeError("index must be a number");
   }
-  if (indexValue.numValue < 0) {
-    return Value{.kind = ValueKind::Error,
-                 .strValue = "index must be greater or equal than zero"};
+  if (indexValue.num < 0) {
+    return makeError("index must be greater or equal than zero");
   }
-  size_t arrIndex = indexValue.numValue;
-  if (arrIndex >= array.values.size()) {
-    return Value{.kind = ValueKind::Error,
-                 .strValue = "index is bigger than array size"};
+  const std::vector<Value> &items = asArray(array)->items;
+  size_t arrIndex = indexValue.num;
+  if (arrIndex >= items.size()) {
+    return makeError("index is bigger than array size");
   }
-  return *array.values[arrIndex];
+  return items[arrIndex];
 }
 
-Value Evaluator::evalHashMapIndex(const Value &hashMap,
-                                  const Value &keyValue) {
-  for (size_t indx = 0; indx + 1 < hashMap.values.size(); indx += 2) {
-    if (compare(BinaryOperator::EQUAL, *hashMap.values[indx], keyValue)) {
-      return *hashMap.values[indx + 1];
+Value Evaluator::evalHashMapIndex(const Value &hashMap, const Value &keyValue) {
+  const std::vector<Value> &entries = asHashMap(hashMap)->entries;
+  for (size_t indx = 0; indx + 1 < entries.size(); indx += 2) {
+    if (compare(BinaryOperator::EQUAL, entries[indx], keyValue)) {
+      return entries[indx + 1];
     }
   }
   return {};

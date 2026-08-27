@@ -80,7 +80,7 @@ int main() {
                                programStatementsIndexes.back());
     // Declarations and statements evaluating to null (like a print call) have
     // nothing worth echoing back.
-    if (!isDeclaration && result.kind != ValueKind::Null) {
+    if (!isDeclaration && !isNull(result)) {
       std::println("{}", inspect(result));
     }
     evaluatedStatements = programStatementsIndexes.size();
