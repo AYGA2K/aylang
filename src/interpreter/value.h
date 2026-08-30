@@ -37,6 +37,8 @@ struct Value {
 
 struct Obj {
   ObjKind kind;
+  bool marked;
+  Obj *next = nullptr;
 };
 
 struct ObjString : Obj {
