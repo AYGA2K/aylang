@@ -1,4 +1,5 @@
 #include "value.h"
+#include "garbage-colector/gc.h"
 #include <cstddef>
 #include <format>
 #include <string>
@@ -6,37 +7,32 @@
 #include <vector>
 
 Value makeString(std::string chars) {
-  ObjString *obj = new ObjString();
-  obj->kind = ObjKind::String;
+  ObjString *obj = allocateObj<ObjString>(ObjKind::String);
   obj->chars = std::move(chars);
   return makeObj(obj);
 }
 
 Value makeError(std::string message) {
-  ObjError *obj = new ObjError();
-  obj->kind = ObjKind::Error;
+  ObjError *obj = allocateObj<ObjError>(ObjKind::Error);
   obj->message = std::move(message);
   return makeObj(obj);
 }
 
 Value makeArray(std::vector<Value> items) {
-  ObjArray *obj = new ObjArray();
-  obj->kind = ObjKind::Array;
+  ObjArray *obj = allocateObj<ObjArray>(ObjKind::Array);
   obj->items = std::move(items);
   return makeObj(obj);
 }
 
 Value makeHashMap(std::vector<Value> entries) {
-  ObjHashMap *obj = new ObjHashMap();
-  obj->kind = ObjKind::HashMap;
+  ObjHashMap *obj = allocateObj<ObjHashMap>(ObjKind::HashMap);
   obj->entries = std::move(entries);
   return makeObj(obj);
 }
 
 Value makeFunction(const std::vector<std::string> &parameters,
                    int bodyStmtIndex, ObjEnv *env) {
-  ObjFunction *obj = new ObjFunction();
-  obj->kind = ObjKind::Function;
+  ObjFunction *obj = allocateObj<ObjFunction>(ObjKind::Function);
   obj->parameters = parameters;
   obj->bodyStmtIndex = bodyStmtIndex;
   obj->env = env;

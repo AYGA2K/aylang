@@ -3,40 +3,12 @@
 #include <cstddef>
 #include <vector>
 
+GC gc;
+
 void maybeCollect(size_t size) {
   if (gc.bytesAllocated + size > gc.nextGC) {
     collectGarbage();
   }
-}
-template <typename T> T *allocateObj(ObjKind kind) {
-  maybeCollect(sizeof(T)); // we collect before creating brand new obj because
-                           // doing it after will make the sweep free it
-                           // because nothing points to it yet
-  T *obj = new T();
-  obj->kind = kind;
-  obj->marked = false;
-  obj->next = gc.objects; // link into the list
-  gc.objects = obj;
-  gc.bytesAllocated += sizeof(T);
-  return obj;
-}
-
-inline Value makeStringObj(std::string s) {
-  ObjString *obj = allocateObj<ObjString>(ObjKind::String);
-  obj->chars = std::move(s);
-  return makeObj(obj);
-}
-
-inline Value makeArrayObj(std::vector<Value> items) {
-  ObjArray *obj = allocateObj<ObjArray>(ObjKind::Array);
-  obj->items = std::move(items);
-  return makeObj(obj);
-}
-
-inline Value makeHashMapObj(std::vector<Value> entries) {
-  ObjHashMap *obj = allocateObj<ObjHashMap>(ObjKind::Array);
-  obj->entries = std::move(entries);
-  return makeObj(obj);
 }
 
 static void markObject(Obj *obj) {
@@ -138,7 +110,19 @@ static void sweep() {
   }
 }
 
-void markRoots() { markObject(gc.globalEnv); }
+void markRoots() {
+  markObject(gc.globalEnv);
+  for (Value *slot : gc.valueRoots) {
+    markValue(*slot);
+  }
+  for (std::vector<Value> *values : gc.vectorRoots) {
+    for (const Value &value : *values)
+      markValue(value);
+  }
+  for (Obj *obj : gc.objRoots) {
+    markObject(obj);
+  }
+}
 
 void collectGarbage() {
   markRoots();

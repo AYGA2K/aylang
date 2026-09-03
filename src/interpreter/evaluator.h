@@ -8,6 +8,8 @@
 struct Evaluator {
   ParserResult parserResult;
   ObjEnv *globalEnv = newEnvironment();
+  bool returning = false; // Set by a return statement and cleared once the call
+                          // it belongs to ends.
   // Returns the value of the last statement.
   Value evalStatements(size_t fromProgramStatement = 0);
   Value evalStatement(int index, ObjEnv *env);
@@ -25,8 +27,7 @@ struct Evaluator {
   std::vector<Value> evalExpressions(const std::vector<int> &argExprIndexes,
                                      ObjEnv *env);
   Value evalCallExpression(int functionExprIndex,
-                           const std::vector<int> &argExprIndexes,
-                           ObjEnv *env);
+                           const std::vector<int> &argExprIndexes, ObjEnv *env);
 
   Value applyFunction(Value &function, std::vector<Value> &args);
   Value evalBuiltinFuncs(std::string funcName,

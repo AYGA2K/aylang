@@ -1,12 +1,9 @@
 #include "environment.h"
+#include "garbage-colector/gc.h"
 #include "interpreter/value.h"
 #include <string>
 
-ObjEnv *newEnvironment() {
-  ObjEnv *env = new ObjEnv();
-  env->kind = ObjKind::Env;
-  return env;
-}
+ObjEnv *newEnvironment() { return allocateObj<ObjEnv>(ObjKind::Env); }
 
 ObjEnv *newEnclosedEnvironment(ObjEnv *outer) {
   ObjEnv *environment = newEnvironment();

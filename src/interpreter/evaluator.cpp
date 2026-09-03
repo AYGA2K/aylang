@@ -1,4 +1,5 @@
 #include "evaluator.h"
+#include "garbage-colector/root.h"
 #include "interpreter/environment.h"
 #include "interpreter/value.h"
 #include "parser/expression.h"
@@ -27,13 +28,16 @@ bool isBuiltIn(std::string name) {
 // (how many statements were already evaluated), so we can use one parser
 // instance in the repl.
 Value Evaluator::evalStatements(size_t fromProgramStatement) {
+  gc.globalEnv = globalEnv;
   Value result;
   for (size_t i = fromProgramStatement;
        i < parserResult.programStatementsIndexes.size(); i++) {
     int index = parserResult.programStatementsIndexes[i];
     result = evalStatement(index, globalEnv);
-    if (isError(result) ||
+    if (isError(result) || returning ||
         parserResult.statements[index].kind == StatementKind::RETURN) {
+      // A top level return ends this run, so the repl's next line starts clean.
+      returning = false;
       return result;
     }
   }
@@ -57,6 +61,7 @@ Value Evaluator::evalExpression(int index, ObjEnv *env) {
   }
   case ExpressionKind::BINARY: {
     Value left = evalExpression(expr.leftExprIndex, env);
+    Rooted rootLeft(left); // it must survive eval right expression
     Value right = evalExpression(expr.rightExprIndex, env);
     return evalInfixExpression(expr.binaryOperator, left, right);
   }
@@ -96,7 +101,11 @@ Value Evaluator::evalStatement(int index, ObjEnv *env) {
     return evalIfStatement(index, env);
   case StatementKind::VAR:
     return evalVarStatement(index, env);
-  case StatementKind::RETURN:
+  case StatementKind::RETURN: {
+    Value value = evalExpression(stmt.expressionIndex, env);
+    returning = true;
+    return value;
+  }
   case StatementKind::EXPRESSION:
     return evalExpression(stmt.expressionIndex, env);
     break;
@@ -205,7 +214,7 @@ Value Evaluator::evalBlockStatement(int index, ObjEnv *env) {
   Value returnedValue;
   for (int index : stmt.statementsIndexes) {
     returnedValue = evalStatement(index, env);
-    if (isError(returnedValue) ||
+    if (isError(returnedValue) || returning ||
         parserResult.statements[index].kind == StatementKind::RETURN) {
       return returnedValue;
     }
@@ -239,6 +248,7 @@ std::vector<Value>
 Evaluator::evalExpressions(const std::vector<int> &argExprIndexes,
                            ObjEnv *env) {
   std::vector<Value> result;
+  RootedVector rootResult(result); // earlier args survive later ones
   for (int index : argExprIndexes) {
     Value value = evalExpression(index, env);
     if (isError(value)) {
@@ -271,7 +281,10 @@ Value Evaluator::applyFunction(Value &function, std::vector<Value> &args) {
     return makeError(message);
   }
   ObjEnv *extendedEnv = extendFunctionEnv(function, args);
+  RootedObj rootEnv(extendedEnv); // holds the whole call alive
   Value evaluted = evalStatement(fn->bodyStmtIndex, extendedEnv);
+  // The return belongs to this call, so the caller carries on normally.
+  returning = false;
   return evaluted;
 }
 
@@ -331,6 +344,7 @@ Value Evaluator::evalBuiltinFuncs(std::string funcName,
       return makeError("first argument to push must be an identifier");
     }
     Value array = envGet(env, arrayExpr.literal);
+    Rooted rootArray(array); // survives evaluating the pushed value
     if (isError(array)) {
       return array;
     }
@@ -358,6 +372,7 @@ Value Evaluator::evalCallExpression(int functionExprIndex,
     return evalBuiltinFuncs(funcName, argExprIndexes, env);
   }
   Value function = envGet(env, funcName);
+  Rooted rootFunction(function); // survives evaluating the arguments
   if (isError(function)) {
     return function;
   }
@@ -367,6 +382,7 @@ Value Evaluator::evalCallExpression(int functionExprIndex,
     return makeError(message);
   }
   std::vector<Value> args = evalExpressions(argExprIndexes, env);
+  RootedVector rootArgs(args); // survive the call itself
   if (args.size() == 1 && isError(args[0])) {
     return args[0];
   }
@@ -375,20 +391,24 @@ Value Evaluator::evalCallExpression(int functionExprIndex,
 
 Value Evaluator::evalArray(int index, ObjEnv *env) {
   Expression expr = parserResult.expressions[index];
-  std::vector<Value> items;
+  Value result = makeArray({}); // allocate the empty array first
+  Rooted rootResult(result);    // now it is reachable from a root
+  ObjArray *array = asArray(result);
   for (int indx : expr.expressionsIndexes) {
-    items.push_back(evalExpression(indx, env));
+    array->items.push_back(evalExpression(indx, env));
   }
-  return makeArray(std::move(items));
+  return result;
 }
 
 Value Evaluator::evalHashMap(int index, ObjEnv *env) {
   Expression expr = parserResult.expressions[index];
-  std::vector<Value> entries;
+  Value result = makeHashMap({}); // allocate the empty map first
+  Rooted rootResult(result);      // now it is reachable from a root
+  ObjHashMap *hashMap = asHashMap(result);
   for (int indx : expr.expressionsIndexes) {
-    entries.push_back(evalExpression(indx, env));
+    hashMap->entries.push_back(evalExpression(indx, env));
   }
-  return makeHashMap(std::move(entries));
+  return result;
 }
 
 Value Evaluator::evalIndex(int index, ObjEnv *env) {
