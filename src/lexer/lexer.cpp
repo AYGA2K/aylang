@@ -10,7 +10,7 @@ TokenType lookupIdentifier(const std::string &literal) {
   static const std::unordered_map<std::string, TokenType> keywords = {
       {"if", TokenType::If},         {"else", TokenType::Else},
       {"while", TokenType::While},   {"fn", TokenType::Function},
-      {"return", TokenType::Return}, {"var", TokenType::Var},
+      {"return", TokenType::Return}, {"let", TokenType::Let},
       {"false", TokenType::False},   {"true", TokenType::True},
   };
 

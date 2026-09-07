@@ -65,8 +65,8 @@ std::string tokenTypeToString(TokenType type) {
     return "Else";
   case TokenType::While:
     return "While";
-  case TokenType::Var:
-    return "Var";
+  case TokenType::Let:
+    return "Let";
   case TokenType::Function:
     return "Function";
   case TokenType::Return:

@@ -121,7 +121,7 @@ TEST(Evaluator, EvalArrayLiteralEvaluatesElements) {
 }
 
 TEST(Evaluator, EvalArrayLiteralStoredInVar) {
-  Value value = eval("var arr = [1, 2, 3]; arr;");
+  Value value = eval("let arr = [1, 2, 3]; arr;");
 
   ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Array));
   ASSERT_EQ(items(value).size(), 3u);
@@ -176,7 +176,7 @@ TEST(Evaluator, EvalHashLiteralMultiplePairs) {
 }
 
 TEST(Evaluator, EvalHashLiteralIdentifierKey) {
-  Value value = eval("var k = \"key\"; {k: 1};");
+  Value value = eval("let k = \"key\"; {k: 1};");
 
   ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::HashMap));
   ASSERT_EQ(items(value).size(), 2u);
@@ -235,7 +235,7 @@ TEST(Evaluator, EvalHashLiteralArrayValue) {
 }
 
 TEST(Evaluator, EvalHashLiteralStoredInVar) {
-  Value value = eval("var h = {\"one\": 1, \"two\": 2}; h;");
+  Value value = eval("let h = {\"one\": 1, \"two\": 2}; h;");
 
   ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::HashMap));
   ASSERT_EQ(items(value).size(), 4u);
@@ -755,60 +755,60 @@ TEST(Evaluator, EvalHashAddNumberIsError) {
 }
 
 TEST(Evaluator, EvalHashIndexStringKey) {
-  Value value = eval("var h = {\"a\": 1}; h[\"a\"];");
+  Value value = eval("let h = {\"a\": 1}; h[\"a\"];");
 
   ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
   EXPECT_DOUBLE_EQ(value.num, 1.0);
 }
 
 TEST(Evaluator, EvalHashIndexNumberKey) {
-  Value value = eval("var h = {1: \"one\", 2: \"two\"}; h[2];");
+  Value value = eval("let h = {1: \"one\", 2: \"two\"}; h[2];");
 
   ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::String));
   EXPECT_EQ(text(value), "two");
 }
 
 TEST(Evaluator, EvalHashIndexBoolKey) {
-  Value value = eval("var h = {true: \"yes\", false: \"no\"}; h[false];");
+  Value value = eval("let h = {true: \"yes\", false: \"no\"}; h[false];");
 
   ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::String));
   EXPECT_EQ(text(value), "no");
 }
 
 TEST(Evaluator, EvalHashIndexSecondPair) {
-  Value value = eval("var h = {\"a\": 1, \"b\": 2}; h[\"b\"];");
+  Value value = eval("let h = {\"a\": 1, \"b\": 2}; h[\"b\"];");
 
   ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
   EXPECT_DOUBLE_EQ(value.num, 2.0);
 }
 
 TEST(Evaluator, EvalHashIndexMissingKeyIsNull) {
-  Value value = eval("var h = {\"a\": 1}; h[\"b\"];");
+  Value value = eval("let h = {\"a\": 1}; h[\"b\"];");
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Null));
 }
 
 TEST(Evaluator, EvalHashIndexWrongKeyKindIsNull) {
-  Value value = eval("var h = {\"a\": 1}; h[0];");
+  Value value = eval("let h = {\"a\": 1}; h[0];");
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Null));
 }
 
 TEST(Evaluator, EvalHashIndexEmptyHashIsNull) {
-  Value value = eval("var h = {}; h[\"a\"];");
+  Value value = eval("let h = {}; h[\"a\"];");
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Null));
 }
 
 TEST(Evaluator, EvalHashIndexWithBinaryKey) {
-  Value value = eval("var h = {2: \"two\"}; h[1 + 1];");
+  Value value = eval("let h = {2: \"two\"}; h[1 + 1];");
 
   ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::String));
   EXPECT_EQ(text(value), "two");
 }
 
 TEST(Evaluator, EvalHashIndexNestedHash) {
-  Value value = eval("var h = {\"a\": {\"b\": 3}}; h[\"a\"];");
+  Value value = eval("let h = {\"a\": {\"b\": 3}}; h[\"a\"];");
 
   ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::HashMap));
   ASSERT_EQ(items(value).size(), 2u);
@@ -816,7 +816,7 @@ TEST(Evaluator, EvalHashIndexNestedHash) {
 }
 
 TEST(Evaluator, EvalHashIndexErrorKeyPropagates) {
-  Value value = eval("var h = {\"a\": 1}; h[undefinedVar];");
+  Value value = eval("let h = {\"a\": 1}; h[undefinedVar];");
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
 }
@@ -828,63 +828,63 @@ TEST(Evaluator, EvalIndexOnUndefinedVariableIsError) {
 }
 
 TEST(Evaluator, EvalIndexOnStringIsError) {
-  Value value = eval("var s = \"abc\"; s[0];");
+  Value value = eval("let s = \"abc\"; s[0];");
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
   EXPECT_EQ(text(value), "variable is not an array or a hashmap");
 }
 
 TEST(Evaluator, EvalArrayIndexReturnsElement) {
-  Value value = eval("var arr = [1, 2, 3]; arr[1];");
+  Value value = eval("let arr = [1, 2, 3]; arr[1];");
 
   ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
   EXPECT_DOUBLE_EQ(value.num, 2.0);
 }
 
 TEST(Evaluator, EvalArrayIndexFirstElement) {
-  Value value = eval("var arr = [\"a\", \"b\"]; arr[0];");
+  Value value = eval("let arr = [\"a\", \"b\"]; arr[0];");
 
   ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::String));
   EXPECT_EQ(text(value), "a");
 }
 
 TEST(Evaluator, EvalArrayIndexOutOfBoundsIsError) {
-  Value value = eval("var arr = [1, 2]; arr[2];");
+  Value value = eval("let arr = [1, 2]; arr[2];");
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
   EXPECT_EQ(text(value), "index is bigger than array size");
 }
 
 TEST(Evaluator, EvalArrayIndexNegativeIsError) {
-  Value value = eval("var arr = [1, 2]; arr[-1];");
+  Value value = eval("let arr = [1, 2]; arr[-1];");
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
   EXPECT_EQ(text(value), "index must be greater or equal than zero");
 }
 
 TEST(Evaluator, EvalArrayIndexOnNonArrayIsError) {
-  Value value = eval("var notArr = 5; notArr[0];");
+  Value value = eval("let notArr = 5; notArr[0];");
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
   EXPECT_EQ(text(value), "variable is not an array or a hashmap");
 }
 
 TEST(Evaluator, EvalArrayIndexNonNumberIsError) {
-  Value value = eval("var arr = [1, 2]; arr[true];");
+  Value value = eval("let arr = [1, 2]; arr[true];");
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
   EXPECT_EQ(text(value), "index must be a number");
 }
 
 TEST(Evaluator, EvalArrayIndexWithBinaryExpression) {
-  Value value = eval("var arr = [1, 2, 3]; arr[1 + 1];");
+  Value value = eval("let arr = [1, 2, 3]; arr[1 + 1];");
 
   ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
   EXPECT_DOUBLE_EQ(value.num, 3.0);
 }
 
 TEST(Evaluator, EvalArrayIndexWithVariable) {
-  Value value = eval("var arr = [1, 2, 3]; var i = 2; arr[i];");
+  Value value = eval("let arr = [1, 2, 3]; let i = 2; arr[i];");
 
   ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
   EXPECT_DOUBLE_EQ(value.num, 3.0);
@@ -1012,19 +1012,19 @@ TEST(Evaluator, EvalIfElseBooleanResult) {
 }
 
 TEST(Evaluator, EvalIfElseWithVariableCondition) {
-  Value value = eval("var x = 5; if (x > 3) { 10; } else { 20; }");
+  Value value = eval("let x = 5; if (x > 3) { 10; } else { 20; }");
 
   EXPECT_DOUBLE_EQ(value.num, 10.0);
 }
 
 TEST(Evaluator, EvalIfElseAlternativeWithVariableCondition) {
-  Value value = eval("var x = 1; if (x > 3) { 10; } else { 20; }");
+  Value value = eval("let x = 1; if (x > 3) { 10; } else { 20; }");
 
   EXPECT_DOUBLE_EQ(value.num, 20.0);
 }
 
 TEST(Evaluator, EvalIfElseVarBindingInAlternativeIsVisibleOutside) {
-  Value value = eval("if (false) { var x = 1; } else { var x = 2; } x;");
+  Value value = eval("if (false) { let x = 1; } else { let x = 2; } x;");
 
   EXPECT_DOUBLE_EQ(value.num, 2.0);
 }
@@ -1068,13 +1068,13 @@ TEST(Evaluator, EvalNestedIfElseInAlternative) {
 }
 
 TEST(Evaluator, EvalIfElseInsideFunctionBody) {
-  Value value = eval("var f = fn(x) { if (x > 0) { 1; } else { 0; } }; f(5);");
+  Value value = eval("let f = fn(x) { if (x > 0) { 1; } else { 0; } }; f(5);");
 
   EXPECT_DOUBLE_EQ(value.num, 1.0);
 }
 
 TEST(Evaluator, EvalIfElseInsideFunctionBodyAlternative) {
-  Value value = eval("var f = fn(x) { if (x > 0) { 1; } else { 0; } }; f(-5);");
+  Value value = eval("let f = fn(x) { if (x > 0) { 1; } else { 0; } }; f(-5);");
 
   EXPECT_DOUBLE_EQ(value.num, 0.0);
 }
@@ -1111,7 +1111,7 @@ TEST(Evaluator, EvalIfElseIfChainThirdBranch) {
 }
 
 TEST(Evaluator, EvalIfElseIfChainComparisons) {
-  Value value = eval("var x = 5; if (x < 0) { \"neg\"; } else if (x == 0) { "
+  Value value = eval("let x = 5; if (x < 0) { \"neg\"; } else if (x == 0) { "
                      "\"zero\"; } else { \"pos\"; }");
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::String));
@@ -1132,96 +1132,96 @@ TEST(Evaluator, EvalIfElseIfBranchMultipleStatements) {
 }
 
 TEST(Evaluator, EvalVarStatementReturnsInitializerValue) {
-  Value value = eval("var x = 5;");
+  Value value = eval("let x = 5;");
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
   EXPECT_DOUBLE_EQ(value.num, 5.0);
 }
 
 TEST(Evaluator, EvalVarStatementBindsName) {
-  Value value = eval("var x = 5; x;");
+  Value value = eval("let x = 5; x;");
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
   EXPECT_DOUBLE_EQ(value.num, 5.0);
 }
 
 TEST(Evaluator, EvalVarStatementBindsString) {
-  Value value = eval("var greeting = \"hello\"; greeting;");
+  Value value = eval("let greeting = \"hello\"; greeting;");
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::String));
   EXPECT_EQ(text(value), "hello");
 }
 
 TEST(Evaluator, EvalVarStatementBindsBoolean) {
-  Value value = eval("var flag = false; flag;");
+  Value value = eval("let flag = false; flag;");
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Bool));
   EXPECT_FALSE(value.boolean);
 }
 
 TEST(Evaluator, EvalVarStatementEvaluatesInitializer) {
-  Value value = eval("var x = 2 * 3 + 4; x;");
+  Value value = eval("let x = 2 * 3 + 4; x;");
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
   EXPECT_DOUBLE_EQ(value.num, 10.0);
 }
 
 TEST(Evaluator, EvalVarStatementInitializerSeesEarlierNames) {
-  Value value = eval("var a = 1; var b = a + 2; var c = a + b; c;");
+  Value value = eval("let a = 1; let b = a + 2; let c = a + b; c;");
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
   EXPECT_DOUBLE_EQ(value.num, 4.0);
 }
 
 TEST(Evaluator, EvalVarStatementRebindingOverwrites) {
-  Value value = eval("var x = 5; var x = 9; x;");
+  Value value = eval("let x = 5; let x = 9; x;");
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
   EXPECT_DOUBLE_EQ(value.num, 9.0);
 }
 
 TEST(Evaluator, EvalVarStatementRebindingChangesKind) {
-  Value value = eval("var x = 5; var x = \"five\"; x;");
+  Value value = eval("let x = 5; let x = \"five\"; x;");
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::String));
   EXPECT_EQ(text(value), "five");
 }
 
 TEST(Evaluator, EvalVarStatementNameIsUsableInExpressions) {
-  Value value = eval("var x = 5; x * 2;");
+  Value value = eval("let x = 5; x * 2;");
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
   EXPECT_DOUBLE_EQ(value.num, 10.0);
 }
 
 TEST(Evaluator, EvalVarStatementNameIsUsableAsIfCondition) {
-  Value value = eval("var flag = false; if (flag) { 1; } else { 2; }");
+  Value value = eval("let flag = false; if (flag) { 1; } else { 2; }");
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
   EXPECT_DOUBLE_EQ(value.num, 2.0);
 }
 
 TEST(Evaluator, EvalVarStatementWithoutInitializerIsNull) {
-  Value value = eval("var x;");
+  Value value = eval("let x;");
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Null));
 }
 
 TEST(Evaluator, EvalVarStatementWithoutInitializerBindsNull) {
-  Value value = eval("var x; x;");
+  Value value = eval("let x; x;");
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Null));
 }
 
 TEST(Evaluator, EvalVarStatementErrorInitializerStopsProgram) {
-  Value value = eval("var x = -true; 5;");
+  Value value = eval("let x = -true; 5;");
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
   EXPECT_EQ(text(value), "unknown operator: -Bool");
 }
 
 TEST(Evaluator, EvalVarStatementInsideBlockIsVisibleOutside) {
-  Value value = eval("if (true) { var x = 7; } x;");
+  Value value = eval("if (true) { let x = 7; } x;");
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
   EXPECT_DOUBLE_EQ(value.num, 7.0);
@@ -1235,35 +1235,35 @@ TEST(Evaluator, EvalUnboundNameIsError) {
 }
 
 TEST(Evaluator, EvalCallExpressionAddsArgs) {
-  Value value = eval("var add = fn(x, y) { x + y; }; add(1, 2);");
+  Value value = eval("let add = fn(x, y) { x + y; }; add(1, 2);");
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
   EXPECT_DOUBLE_EQ(value.num, 3.0);
 }
 
 TEST(Evaluator, EvalCallExpressionMultipleBodyStatementsReturnsLast) {
-  Value value = eval("var f = fn(x) { var y = x + 1; y * 2; }; f(3);");
+  Value value = eval("let f = fn(x) { let y = x + 1; y * 2; }; f(3);");
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
   EXPECT_DOUBLE_EQ(value.num, 8.0);
 }
 
 TEST(Evaluator, EvalCallExpressionArgumentsAreLexicallyScoped) {
-  Value value = eval("var x = 10; var f = fn(x) { x; }; f(5); x;");
+  Value value = eval("let x = 10; let f = fn(x) { x; }; f(5); x;");
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
   EXPECT_DOUBLE_EQ(value.num, 10.0);
 }
 
 TEST(Evaluator, EvalCallExpressionReturnStopsBodyEarly) {
-  Value value = eval("var f = fn(x) { return x + 1; x + 100; }; f(2);");
+  Value value = eval("let f = fn(x) { return x + 1; x + 100; }; f(2);");
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
   EXPECT_DOUBLE_EQ(value.num, 3.0);
 }
 
 TEST(Evaluator, EvalCallExpressionArgumentCountMismatchIsError) {
-  Value value = eval("var add = fn(x, y) { x + y; }; add(1);");
+  Value value = eval("let add = fn(x, y) { x + y; }; add(1);");
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
   EXPECT_EQ(text(value), "wrong number of arguments: got 1, want 2");
@@ -1282,7 +1282,7 @@ TEST(Evaluator, EvalBuiltinPrintBool) {
 }
 
 TEST(Evaluator, EvalBuiltinPrintNull) {
-  EXPECT_EQ(evalOutput("var x; print(x);"), "null\n");
+  EXPECT_EQ(evalOutput("let x; print(x);"), "null\n");
 }
 
 TEST(Evaluator, EvalBuiltinPrintWithoutArgs) {
@@ -1294,7 +1294,7 @@ TEST(Evaluator, EvalBuiltinPrintSeparatesArgsWithSpace) {
 }
 
 TEST(Evaluator, EvalBuiltinPrintEvaluatesArgs) {
-  EXPECT_EQ(evalOutput("var name = \"ayga\"; print(\"hi \" + name);"),
+  EXPECT_EQ(evalOutput("let name = \"ayga\"; print(\"hi \" + name);"),
             "hi ayga\n");
 }
 
@@ -1303,7 +1303,7 @@ TEST(Evaluator, EvalBuiltinPrintEveryCallOutputs) {
 }
 
 TEST(Evaluator, EvalBuiltinPrintInsideFunctionBody) {
-  EXPECT_EQ(evalOutput("var f = fn(x) { print(x); }; f(7);"), "7\n");
+  EXPECT_EQ(evalOutput("let f = fn(x) { print(x); }; f(7);"), "7\n");
 }
 
 TEST(Evaluator, EvalBuiltinPrintReturnsNull) {
@@ -1332,7 +1332,7 @@ TEST(Evaluator, EvalBuiltinPrintUnboundArgumentIsError) {
 }
 
 TEST(Evaluator, EvalBuiltinPrintIsNotShadowedByVar) {
-  EXPECT_EQ(evalOutput("var print = 5; print(\"hello\");"), "hello\n");
+  EXPECT_EQ(evalOutput("let print = 5; print(\"hello\");"), "hello\n");
 }
 
 TEST(Evaluator, EvalBuiltinPrintEmptyArray) {
@@ -1402,7 +1402,7 @@ TEST(Evaluator, EvalBuiltinLenEmptyHash) {
 }
 
 TEST(Evaluator, EvalBuiltinPushHashIsError) {
-  Value value = eval("var h = {}; push(h, 1);");
+  Value value = eval("let h = {}; push(h, 1);");
 
   ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
   EXPECT_EQ(text(value), "argument to push is not an array: HashMap");
@@ -1423,14 +1423,14 @@ TEST(Evaluator, EvalBuiltinLenEmptyString) {
 }
 
 TEST(Evaluator, EvalBuiltinLenEvaluatesArgs) {
-  Value value = eval("var name = \"ayga\"; len(\"hi \" + name);");
+  Value value = eval("let name = \"ayga\"; len(\"hi \" + name);");
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
   EXPECT_DOUBLE_EQ(value.num, 7.0);
 }
 
 TEST(Evaluator, EvalBuiltinLenIsNotShadowedByVar) {
-  Value value = eval("var len = 5; len(\"abc\");");
+  Value value = eval("let len = 5; len(\"abc\");");
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
   EXPECT_DOUBLE_EQ(value.num, 3.0);
@@ -1474,7 +1474,7 @@ TEST(Evaluator, EvalBuiltinLenBoolArgumentIsError) {
 
 TEST(Evaluator, EvalBuiltinLenNullArgumentIsError) {
   std::string output;
-  Value value = evalCapturingOutput("var x; len(x);", output);
+  Value value = evalCapturingOutput("let x; len(x);", output);
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
   EXPECT_EQ(text(value), "argument to len is not supported: Null");
@@ -1500,14 +1500,14 @@ TEST(Evaluator, EvalBuiltinLenUnboundArgumentIsError) {
 }
 
 TEST(Evaluator, EvalBuiltinPushReturnsPushedValue) {
-  Value value = eval("var arr = [1]; push(arr, 2);");
+  Value value = eval("let arr = [1]; push(arr, 2);");
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
   EXPECT_DOUBLE_EQ(value.num, 2.0);
 }
 
 TEST(Evaluator, EvalBuiltinPushAppendsToArray) {
-  Value value = eval("var arr = [1, 2]; push(arr, 3); arr;");
+  Value value = eval("let arr = [1, 2]; push(arr, 3); arr;");
 
   ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Array));
   ASSERT_EQ(items(value).size(), 3u);
@@ -1517,7 +1517,7 @@ TEST(Evaluator, EvalBuiltinPushAppendsToArray) {
 }
 
 TEST(Evaluator, EvalBuiltinPushOnEmptyArray) {
-  Value value = eval("var arr = []; push(arr, 1); arr;");
+  Value value = eval("let arr = []; push(arr, 1); arr;");
 
   ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Array));
   ASSERT_EQ(items(value).size(), 1u);
@@ -1525,7 +1525,7 @@ TEST(Evaluator, EvalBuiltinPushOnEmptyArray) {
 }
 
 TEST(Evaluator, EvalBuiltinPushEvaluatesSecondArgument) {
-  Value value = eval("var arr = []; push(arr, 1 + 2); arr;");
+  Value value = eval("let arr = []; push(arr, 1 + 2); arr;");
 
   ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Array));
   ASSERT_EQ(items(value).size(), 1u);
@@ -1561,7 +1561,7 @@ TEST(Evaluator, EvalBuiltinPushFirstArgumentNotIdentifierIsError) {
 
 TEST(Evaluator, EvalBuiltinPushOnNonArrayIsError) {
   std::string output;
-  Value value = evalCapturingOutput("var notArr = 5; push(notArr, 1);", output);
+  Value value = evalCapturingOutput("let notArr = 5; push(notArr, 1);", output);
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
   EXPECT_EQ(text(value), "argument to push is not an array: Number");
@@ -1579,7 +1579,7 @@ TEST(Evaluator, EvalBuiltinPushUnboundArrayIsError) {
 
 TEST(Evaluator, EvalBuiltinPushSecondArgumentErrorIsReturned) {
   std::string output;
-  Value value = evalCapturingOutput("var arr = []; push(arr, -true);", output);
+  Value value = evalCapturingOutput("let arr = []; push(arr, -true);", output);
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
   EXPECT_EQ(text(value), "unknown operator: -Bool");

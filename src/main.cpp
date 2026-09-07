@@ -22,7 +22,7 @@ static bool readLine(const char *prompt, std::string &line) {
 static bool isDeclarationStatement(const ParserResult &parserResult,
                                    int statementIndex) {
   const Statement &statement = parserResult.statements[statementIndex];
-  if (statement.kind == StatementKind::VAR) {
+  if (statement.kind == StatementKind::LET) {
     return true;
   }
   return statement.kind == StatementKind::EXPRESSION &&

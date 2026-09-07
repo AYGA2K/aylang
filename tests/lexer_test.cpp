@@ -73,8 +73,8 @@ TEST(Lexer, KeywordsVsIdentifiers) {
 }
 
 TEST(Lexer, VariableDeclaration) {
-  expectTokens("var x = 5;", {
-                                 {TokenType::Var, "var"},
+  expectTokens("let x = 5;", {
+                                 {TokenType::Let, "let"},
                                  {TokenType::Identifier, "x"},
                                  {TokenType::Assign, "="},
                                  {TokenType::Number, "5"},
@@ -147,9 +147,9 @@ TEST(Lexer, AdjacentStringLiterals) {
                                   });
 }
 
-TEST(Lexer, StringLiteralInVarDeclaration) {
-  expectTokens("var x = \"hello\";", {
-                                         {TokenType::Var, "var"},
+TEST(Lexer, StringLiteralInLetDeclaration) {
+  expectTokens("let x = \"hello\";", {
+                                         {TokenType::Let, "let"},
                                          {TokenType::Identifier, "x"},
                                          {TokenType::Assign, "="},
                                          {TokenType::String, "hello"},

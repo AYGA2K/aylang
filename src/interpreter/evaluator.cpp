@@ -99,8 +99,8 @@ Value Evaluator::evalStatement(int index, ObjEnv *env) {
     return evalBlockStatement(index, env);
   case StatementKind::IF:
     return evalIfStatement(index, env);
-  case StatementKind::VAR:
-    return evalVarStatement(index, env);
+  case StatementKind::LET:
+    return evalLetStatement(index, env);
   case StatementKind::RETURN: {
     Value value = evalExpression(stmt.expressionIndex, env);
     returning = true;
@@ -222,7 +222,7 @@ Value Evaluator::evalBlockStatement(int index, ObjEnv *env) {
   return returnedValue;
 }
 
-Value Evaluator::evalVarStatement(int index, ObjEnv *env) {
+Value Evaluator::evalLetStatement(int index, ObjEnv *env) {
   const Statement &stmt = parserResult.statements[index];
   // If the variable has no initializer it gets null as value
   if (stmt.expressionIndex < 0) {

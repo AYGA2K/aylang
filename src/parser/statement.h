@@ -3,7 +3,7 @@
 #include <vector>
 
 enum class StatementKind {
-  VAR,
+  LET,
   RETURN,
   EXPRESSION,
   BLOCK,
@@ -13,10 +13,10 @@ enum class StatementKind {
 struct Statement {
   StatementKind kind;
 
-  // Var Statement
+  // Let Statement
   std::string name;
 
-  // Index into ParserResult.expressions for the var initializer, return value,
+  // Index into ParserResult.expressions for the let initializer, return value,
   // or expression statement expression (-1 means none).
   int expressionIndex = -1;
 

@@ -36,7 +36,7 @@ enum class TokenType {
   If,
   Else,
   While,
-  Var,
+  Let,
   True,
   False,
 

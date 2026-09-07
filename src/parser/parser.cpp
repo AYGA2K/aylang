@@ -73,8 +73,8 @@ void Parser::parse() {
 int Parser::parseStatement() {
   size_t statementsBefore = parserResult.statements.size();
   switch (currentToken().type) {
-  case TokenType::Var:
-    parseVarStatement();
+  case TokenType::Let:
+    parseLetStatement();
     break;
   case TokenType::If:
     parseIfStatement();
@@ -114,11 +114,11 @@ void Parser::parseExpressionStatement() {
   parserResult.statements.push_back(statement);
 }
 
-// Parses "var name;" or "var name = expression;"
-void Parser::parseVarStatement() {
-  current++; // skip "var"
+// Parses "let name;" or "let name = expression;"
+void Parser::parseLetStatement() {
+  current++; // skip "let"
   Statement statement;
-  statement.kind = StatementKind::VAR;
+  statement.kind = StatementKind::LET;
   if (!currentTokenIs(TokenType::Identifier)) {
     errors.push_back(
         expectedTokenError(TokenType::Identifier, currentToken().type));
@@ -126,7 +126,7 @@ void Parser::parseVarStatement() {
   }
   statement.name = currentToken().literal;
   current++;
-  // Declaration without initializer: "var name;"
+  // Declaration without initializer: "let name;"
   if (currentTokenIs(TokenType::Semicolon)) {
     parserResult.statements.push_back(statement);
     return;

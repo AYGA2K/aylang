@@ -91,7 +91,7 @@ struct Parser {
   Precedence nextPrecedence();
   void parse();
   int parseStatement();
-  void parseVarStatement();
+  void parseLetStatement();
   void parseReturnStatement();
   void parseExpressionStatement();
   int parseExpression(Precedence precedence);
