@@ -12,8 +12,8 @@
 #include <utility>
 #include <vector>
 
-inline constexpr std::array<std::string, 3> builtinFuncs = {"print", "len",
-                                                            "push"};
+inline constexpr std::array<std::string, 4> builtinFuncs = {"print", "len",
+                                                            "push", "set"};
 
 bool isBuiltIn(std::string name) {
   for (std::string builtin : builtinFuncs) {
@@ -288,77 +288,137 @@ Value Evaluator::applyFunction(Value &function, std::vector<Value> &args) {
   return evaluted;
 }
 
+static Value wrongArgCountError(size_t got, size_t want) {
+  std::string message = "wrong number of arguments: got " +
+                        std::to_string(got) + ", want " + std::to_string(want);
+  return makeError(message);
+}
+
+static bool argsFailed(const std::vector<Value> &args) {
+  return args.size() == 1 && isError(args[0]);
+}
+
+Value Evaluator::lookupVariableArg(const std::string &funcName,
+                                   int argExprIndex, ObjEnv *env) {
+  const Expression &expr = parserResult.expressions[argExprIndex];
+  if (expr.kind != ExpressionKind::IDENTIFIER) {
+    return makeError("first argument to " + funcName +
+                     " must be an identifier");
+  }
+  return envGet(env, expr.literal);
+}
+
+Value Evaluator::evalPrint(const std::vector<int> &argExprIndexes,
+                           ObjEnv *env) {
+  std::vector<Value> args = evalExpressions(argExprIndexes, env);
+  if (argsFailed(args)) {
+    return args[0];
+  }
+  std::string printedString;
+  for (size_t indx = 0; indx < args.size(); indx++) {
+    if (indx > 0) {
+      printedString += " ";
+    }
+    printedString += inspect(args[indx]);
+  }
+  std::println("{}", printedString);
+  return {};
+}
+
+Value Evaluator::evalLen(const std::vector<int> &argExprIndexes, ObjEnv *env) {
+  if (argExprIndexes.size() != 1) {
+    return wrongArgCountError(argExprIndexes.size(), 1);
+  }
+  std::vector<Value> args = evalExpressions(argExprIndexes, env);
+  if (argsFailed(args)) {
+    return args[0];
+  }
+  const Value arg = args[0];
+  if (!isString(arg) && !isArray(arg) && !isHashMap(arg)) {
+    std::string message =
+        "argument to len is not supported: " + valueKindToString(kindOf(arg));
+    return makeError(message);
+  }
+  if (isString(arg)) {
+    return makeNumber(static_cast<double>(asString(arg)->chars.size()));
+  }
+
+  if (isHashMap(arg)) {
+    size_t length = asHashMap(arg)->entries.size() / 2;
+    return makeNumber(static_cast<double>(length));
+  }
+
+  return makeNumber(static_cast<double>(asArray(arg)->items.size()));
+}
+
+Value Evaluator::evalPush(const std::vector<int> &argExprIndexes, ObjEnv *env) {
+  if (argExprIndexes.size() != 2) {
+    return wrongArgCountError(argExprIndexes.size(), 2);
+  }
+  Value array = lookupVariableArg("push", argExprIndexes[0], env);
+  Rooted rootArray(array); // survives evaluating the pushed value
+  if (isError(array)) {
+    return array;
+  }
+  if (!isArray(array)) {
+    std::string message =
+        "argument to push is not an array: " + valueKindToString(kindOf(array));
+    return makeError(message);
+  }
+  Value pushedValue = evalExpression(argExprIndexes[1], env);
+  if (isError(pushedValue)) {
+    return pushedValue;
+  }
+  asArray(array)->items.push_back(pushedValue);
+  return pushedValue;
+}
+
+Value Evaluator::evalSet(const std::vector<int> &argExprIndexes, ObjEnv *env) {
+  if (argExprIndexes.size() != 3) {
+    return wrongArgCountError(argExprIndexes.size(), 3);
+  }
+  Value hashMap = lookupVariableArg("set", argExprIndexes[0], env);
+  Rooted rootHashMap(hashMap); // survives evaluating the key and the value
+  if (isError(hashMap)) {
+    return hashMap;
+  }
+  if (!isHashMap(hashMap)) {
+    std::string message = "argument to set is not a hashMap: " +
+                          valueKindToString(kindOf(hashMap));
+    return makeError(message);
+  }
+  Value key = evalExpression(argExprIndexes[1], env);
+  Rooted rootKey(key); // survives evaluating the value
+  if (isError(key)) {
+    return key;
+  }
+  if (!isString(key)) {
+    std::string message = "key argument to set is not a string: " +
+                          valueKindToString(kindOf(key));
+    return makeError(message);
+  }
+  Value value = evalExpression(argExprIndexes[2], env);
+  if (isError(value)) {
+    return value;
+  }
+  hashMapSet(asHashMap(hashMap), key, value);
+  return value;
+}
+
 Value Evaluator::evalBuiltinFuncs(std::string funcName,
                                   const std::vector<int> &argExprIndexes,
                                   ObjEnv *env) {
   if (funcName == "print") {
-    std::vector<Value> args = evalExpressions(argExprIndexes, env);
-    if (args.size() == 1 && isError(args[0])) {
-      return args[0];
-    }
-    std::string printedString;
-    for (size_t indx = 0; indx < args.size(); indx++) {
-      if (indx > 0) {
-        printedString += " ";
-      }
-      printedString += inspect(args[indx]);
-    }
-    std::println("{}", printedString);
-    return {};
+    return evalPrint(argExprIndexes, env);
   }
   if (funcName == "len") {
-    if (argExprIndexes.size() != 1) {
-      std::string message = "wrong number of arguments: got " +
-                            std::to_string(argExprIndexes.size()) + ", want 1";
-      return makeError(message);
-    }
-    std::vector<Value> args = evalExpressions(argExprIndexes, env);
-    if (args.size() == 1 && isError(args[0])) {
-      return args[0];
-    }
-    const Value arg = args[0];
-    if (!isString(arg) && !isArray(arg) && !isHashMap(arg)) {
-      std::string message =
-          "argument to len is not supported: " + valueKindToString(kindOf(arg));
-      return makeError(message);
-    }
-    if (isString(arg)) {
-      return makeNumber(static_cast<double>(asString(arg)->chars.size()));
-    }
-
-    if (isHashMap(arg)) {
-      size_t length = asHashMap(arg)->entries.size() / 2;
-      return makeNumber(static_cast<double>(length));
-    }
-
-    return makeNumber(static_cast<double>(asArray(arg)->items.size()));
+    return evalLen(argExprIndexes, env);
   }
   if (funcName == "push") {
-    if (argExprIndexes.size() != 2) {
-      std::string message = "wrong number of arguments: got " +
-                            std::to_string(argExprIndexes.size()) + ", want 2";
-      return makeError(message);
-    }
-    const Expression &arrayExpr = parserResult.expressions[argExprIndexes[0]];
-    if (arrayExpr.kind != ExpressionKind::IDENTIFIER) {
-      return makeError("first argument to push must be an identifier");
-    }
-    Value array = envGet(env, arrayExpr.literal);
-    Rooted rootArray(array); // survives evaluating the pushed value
-    if (isError(array)) {
-      return array;
-    }
-    if (!isArray(array)) {
-      std::string message = "argument to push is not an array: " +
-                            valueKindToString(kindOf(array));
-      return makeError(message);
-    }
-    Value pushedValue = evalExpression(argExprIndexes[1], env);
-    if (isError(pushedValue)) {
-      return pushedValue;
-    }
-    asArray(array)->items.push_back(pushedValue);
-    return pushedValue;
+    return evalPush(argExprIndexes, env);
+  }
+  if (funcName == "set") {
+    return evalSet(argExprIndexes, env);
   }
   return {};
 }
@@ -404,9 +464,14 @@ Value Evaluator::evalHashMap(int index, ObjEnv *env) {
   Expression expr = parserResult.expressions[index];
   Value result = makeHashMap({}); // allocate the empty map first
   Rooted rootResult(result);      // now it is reachable from a root
-  ObjHashMap *hashMap = asHashMap(result);
-  for (int indx : expr.expressionsIndexes) {
-    hashMap->entries.push_back(evalExpression(indx, env));
+  // expressionsIndexes holds flattened key/value pairs
+  const std::vector<int> &pairs = expr.expressionsIndexes;
+  for (size_t indx = 0; indx + 1 < pairs.size(); indx += 2) {
+    Value key = evalExpression(pairs[indx], env);
+    Rooted rootKey(key); // survives evaluating the value
+    Value value = evalExpression(pairs[indx + 1], env);
+    // A repeated key in the literal keeps its last value
+    hashMapSet(asHashMap(result), key, value);
   }
   return result;
 }

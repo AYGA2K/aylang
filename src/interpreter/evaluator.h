@@ -32,6 +32,13 @@ struct Evaluator {
   Value applyFunction(Value &function, std::vector<Value> &args);
   Value evalBuiltinFuncs(std::string funcName,
                          const std::vector<int> &argExprIndexes, ObjEnv *env);
+  Value evalPrint(const std::vector<int> &argExprIndexes, ObjEnv *env);
+  Value evalLen(const std::vector<int> &argExprIndexes, ObjEnv *env);
+  Value evalPush(const std::vector<int> &argExprIndexes, ObjEnv *env);
+  Value evalSet(const std::vector<int> &argExprIndexes, ObjEnv *env);
+  Value lookupVariableArg(const std::string &funcName, int argExprIndex,
+                          ObjEnv *env);
+
   Value evalArray(int index, ObjEnv *env);
 
   Value evalHashMap(int index, ObjEnv *env);

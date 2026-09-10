@@ -1586,4 +1586,216 @@ TEST(Evaluator, EvalBuiltinPushSecondArgumentErrorIsReturned) {
   EXPECT_EQ(output, "");
 }
 
+TEST(Evaluator, EvalBuiltinSetReturnsSetValue) {
+  Value value = eval("let h = {}; set(h, \"a\", 1);");
+
+  EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 1.0);
+}
+
+TEST(Evaluator, EvalBuiltinSetAddsPairToEmptyHash) {
+  Value value = eval("let h = {}; set(h, \"a\", 1); h;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::HashMap));
+  ASSERT_EQ(items(value).size(), 2u);
+  EXPECT_EQ(text(items(value)[0]), "a");
+  EXPECT_DOUBLE_EQ(items(value)[1].num, 1.0);
+}
+
+TEST(Evaluator, EvalBuiltinSetAppendsNewKey) {
+  Value value = eval("let h = {\"a\": 1}; set(h, \"b\", 2); h;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::HashMap));
+  ASSERT_EQ(items(value).size(), 4u);
+  EXPECT_EQ(text(items(value)[0]), "a");
+  EXPECT_DOUBLE_EQ(items(value)[1].num, 1.0);
+  EXPECT_EQ(text(items(value)[2]), "b");
+  EXPECT_DOUBLE_EQ(items(value)[3].num, 2.0);
+}
+
+TEST(Evaluator, EvalBuiltinSetReplacesExistingKey) {
+  Value value = eval("let h = {\"a\": 1, \"b\": 2}; set(h, \"a\", 9); h;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::HashMap));
+  ASSERT_EQ(items(value).size(), 4u);
+  EXPECT_EQ(text(items(value)[0]), "a");
+  EXPECT_DOUBLE_EQ(items(value)[1].num, 9.0);
+  EXPECT_EQ(text(items(value)[2]), "b");
+  EXPECT_DOUBLE_EQ(items(value)[3].num, 2.0);
+}
+
+TEST(Evaluator, EvalBuiltinSetReplacingKeyKeepsLen) {
+  Value value = eval("let h = {\"a\": 1}; set(h, \"a\", 2); len(h);");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 1.0);
+}
+
+TEST(Evaluator, EvalBuiltinSetNewKeyGrowsLen) {
+  Value value = eval("let h = {\"a\": 1}; set(h, \"b\", 2); len(h);");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 2.0);
+}
+
+TEST(Evaluator, EvalBuiltinSetValueIsReadableByIndex) {
+  Value value = eval("let h = {}; set(h, \"a\", 1); h[\"a\"];");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 1.0);
+}
+
+TEST(Evaluator, EvalBuiltinSetReplacedValueIsReadableByIndex) {
+  Value value = eval("let h = {\"a\": 1}; set(h, \"a\", 9); h[\"a\"];");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 9.0);
+}
+
+TEST(Evaluator, EvalBuiltinSetEvaluatesKeyArgument) {
+  Value value = eval("let h = {}; set(h, \"a\" + \"b\", 1); h[\"ab\"];");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 1.0);
+}
+
+TEST(Evaluator, EvalBuiltinSetEvaluatesValueArgument) {
+  Value value = eval("let h = {}; set(h, \"a\", 1 + 2); h[\"a\"];");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 3.0);
+}
+
+TEST(Evaluator, EvalBuiltinSetHashValue) {
+  Value value = eval("let h = {}; set(h, \"a\", {\"b\": 1}); h;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::HashMap));
+  ASSERT_EQ(items(value).size(), 2u);
+  EXPECT_EQ(static_cast<int>(kindOf(items(value)[1])),
+            static_cast<int>(ValueKind::HashMap));
+}
+
+TEST(Evaluator, EvalBuiltinSetTwiceAddsBothKeys) {
+  Value value =
+      eval("let h = {}; set(h, \"a\", 1); set(h, \"b\", 2); len(h);");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 2.0);
+}
+
+TEST(Evaluator, EvalBuiltinSetTooFewArgsIsError) {
+  std::string output;
+  Value value = evalCapturingOutput("set(1, 2);", output);
+
+  EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value), "wrong number of arguments: got 2, want 3");
+  EXPECT_EQ(output, "");
+}
+
+TEST(Evaluator, EvalBuiltinSetTooManyArgsIsError) {
+  std::string output;
+  Value value = evalCapturingOutput("set(1, 2, 3, 4);", output);
+
+  EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value), "wrong number of arguments: got 4, want 3");
+  EXPECT_EQ(output, "");
+}
+
+TEST(Evaluator, EvalBuiltinSetFirstArgumentNotIdentifierIsError) {
+  std::string output;
+  Value value = evalCapturingOutput("set({}, \"a\", 1);", output);
+
+  EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value), "first argument to set must be an identifier");
+  EXPECT_EQ(output, "");
+}
+
+TEST(Evaluator, EvalBuiltinSetOnNonHashMapIsError) {
+  std::string output;
+  Value value =
+      evalCapturingOutput("let notMap = 5; set(notMap, \"a\", 1);", output);
+
+  EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value), "argument to set is not a hashMap: Number");
+  EXPECT_EQ(output, "");
+}
+
+TEST(Evaluator, EvalBuiltinSetOnArrayIsError) {
+  std::string output;
+  Value value =
+      evalCapturingOutput("let arr = [1]; set(arr, \"a\", 1);", output);
+
+  EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value), "argument to set is not a hashMap: Array");
+  EXPECT_EQ(output, "");
+}
+
+TEST(Evaluator, EvalBuiltinSetUnboundHashMapIsError) {
+  std::string output;
+  Value value = evalCapturingOutput("set(nope, \"a\", 1);", output);
+
+  EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value), "identifier not found: nope");
+  EXPECT_EQ(output, "");
+}
+
+TEST(Evaluator, EvalBuiltinSetNumberKeyIsError) {
+  std::string output;
+  Value value = evalCapturingOutput("let h = {}; set(h, 1, 2);", output);
+
+  EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value), "key argument to set is not a string: Number");
+  EXPECT_EQ(output, "");
+}
+
+TEST(Evaluator, EvalBuiltinSetArrayKeyIsError) {
+  std::string output;
+  Value value = evalCapturingOutput("let h = {}; set(h, [1], 2);", output);
+
+  EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value), "key argument to set is not a string: Array");
+  EXPECT_EQ(output, "");
+}
+
+TEST(Evaluator, EvalBuiltinSetKeyErrorIsReturned) {
+  std::string output;
+  Value value = evalCapturingOutput("let h = {}; set(h, -true, 1);", output);
+
+  EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value), "unknown operator: -Bool");
+  EXPECT_EQ(output, "");
+}
+
+TEST(Evaluator, EvalBuiltinSetValueErrorIsReturned) {
+  std::string output;
+  Value value = evalCapturingOutput("let h = {}; set(h, \"a\", -true);", output);
+
+  EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value), "unknown operator: -Bool");
+  EXPECT_EQ(output, "");
+}
+
+TEST(Evaluator, EvalHashLiteralDuplicateKeyKeepsLastValue) {
+  Value value = eval("{\"a\": 1, \"a\": 2};");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::HashMap));
+  ASSERT_EQ(items(value).size(), 2u);
+  EXPECT_EQ(text(items(value)[0]), "a");
+  EXPECT_DOUBLE_EQ(items(value)[1].num, 2.0);
+}
+
+TEST(Evaluator, EvalHashLiteralDuplicateKeyLen) {
+  Value value = eval("len({\"a\": 1, \"b\": 2, \"a\": 3});");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 2.0);
+}
+
+TEST(Evaluator, EvalHashLiteralDuplicateNumberKeyKeepsLastValue) {
+  Value value = eval("let h = {1: \"one\", 1: \"uno\"}; h[1];");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::String));
+  EXPECT_EQ(text(value), "uno");
+}
+
 } // namespace

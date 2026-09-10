@@ -92,6 +92,8 @@ Value makeHashMap(std::vector<Value> entries);
 Value makeFunction(const std::vector<std::string> &parameters,
                    int bodyStmtIndex, ObjEnv *env);
 
+void hashMapSet(ObjHashMap *hashMap, const Value &key, const Value &value);
+
 inline bool isObjKind(const Value &v, ObjKind k) {
   return v.tag == Tag::Obj && v.obj->kind == k;
 }

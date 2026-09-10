@@ -39,6 +39,18 @@ Value makeFunction(const std::vector<std::string> &parameters,
   return makeObj(obj);
 }
 
+void hashMapSet(ObjHashMap *hashMap, const Value &key, const Value &value) {
+  std::vector<Value> &entries = hashMap->entries;
+  for (size_t indx = 0; indx + 1 < entries.size(); indx += 2) {
+    if (compare(BinaryOperator::EQUAL, entries[indx], key)) {
+      entries[indx + 1] = value;
+      return;
+    }
+  }
+  entries.push_back(key);
+  entries.push_back(value);
+}
+
 ValueKind kindOf(const Value &value) {
   switch (value.tag) {
   case Tag::Null:
