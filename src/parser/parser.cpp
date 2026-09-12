@@ -17,6 +17,7 @@ std::unordered_map<TokenType, Precedence> precedences{
     {TokenType::Slash, Precedence::PRODUCT},
     {TokenType::Star, Precedence::PRODUCT},
     {TokenType::Percent, Precedence::PRODUCT},
+    {TokenType::Assign, Precedence::ASSIGN},
     {TokenType::And, Precedence::LOGIC_AND},
     {TokenType::Or, Precedence::LOGIC_OR},
     {TokenType::LParen, Precedence::CALL},
@@ -255,6 +256,24 @@ int Parser::parseBinary(int leftExprIndex) {
   Precedence precedence = currentPrecedence();
   current++;
   expression.rightExprIndex = parseExpression(precedence);
+  parserResult.expressions.push_back(expression);
+  return static_cast<int>(parserResult.expressions.size()) - 1;
+}
+
+int Parser::parseAssign(int leftExprIndex) {
+  if (leftExprIndex < 0 || parserResult.expressions[leftExprIndex].kind !=
+                               ExpressionKind::IDENTIFIER) {
+    errors.push_back("Invalid assignment target");
+    return -1;
+  }
+  Expression expression;
+  expression.kind = ExpressionKind::ASSIGN;
+  expression.literal = parserResult.expressions[leftExprIndex].literal;
+  current++; // skip "="
+  expression.rightExprIndex = parseExpression(Precedence::LOWEST);
+  if (expression.rightExprIndex == -1) {
+    return -1;
+  }
   parserResult.expressions.push_back(expression);
   return static_cast<int>(parserResult.expressions.size()) - 1;
 }
@@ -514,8 +533,7 @@ int Parser::parseHashLiteral() {
       return -1;
     }
     if (!nextTokenIs(TokenType::Colon)) {
-      errors.push_back(
-          expectedTokenError(TokenType::Colon, nextToken().type));
+      errors.push_back(expectedTokenError(TokenType::Colon, nextToken().type));
       return -1;
     }
     current += 2; // move past the key and ":"

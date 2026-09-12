@@ -810,6 +810,78 @@ TEST(Evaluator, EvalBinaryRightNotEvaluatedAfterErrorLeft) {
   EXPECT_EQ(output, "");
 }
 
+TEST(Evaluator, EvalAssignRebindsVariable) {
+  Value value = eval("let x = 1; x = 2; x;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 2.0);
+}
+
+TEST(Evaluator, EvalAssignReturnsValue) {
+  Value value = eval("let x = 1; x = 9;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 9.0);
+}
+
+TEST(Evaluator, EvalAssignEvaluatesRightSide) {
+  Value value = eval("let x = 0; x = 1 + 2; x;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 3.0);
+}
+
+TEST(Evaluator, EvalAssignChained) {
+  Value value = eval("let a = 0; let b = 0; a = b = 7; a + b;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 14.0);
+}
+
+TEST(Evaluator, EvalAssignUpdatesOuterVariableFromCall) {
+  Value value = eval("let n = 0; let bump = fn() { n = n + 1; return n; };"
+                     "bump(); bump(); n;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 2.0);
+}
+
+TEST(Evaluator, EvalAssignPrefersInnerBinding) {
+  Value value = eval("let n = 0; let f = fn(n) { n = 5; return n; };"
+                     "f(1); n;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 0.0);
+}
+
+TEST(Evaluator, EvalAssignInsideBlock) {
+  Value value = eval("let x = 1; if (true) { x = 2; } x;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 2.0);
+}
+
+TEST(Evaluator, EvalAssignToUnboundNameIsError) {
+  Value value = eval("nope = 1;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value), "identifier not found: nope");
+}
+
+TEST(Evaluator, EvalAssignRightSideErrorPropagates) {
+  Value value = eval("let x = 1; x = nope;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value), "identifier not found: nope");
+}
+
+TEST(Evaluator, EvalAssignKeepsValueAfterFailedRightSide) {
+  Value value = eval("let x = 1; let y = 0; y = nope; x;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value), "identifier not found: nope");
+}
+
 TEST(Evaluator, EvalModulo) {
   Value value = eval("7 % 2;");
 

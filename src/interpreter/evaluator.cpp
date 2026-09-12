@@ -86,6 +86,16 @@ Value Evaluator::evalExpression(int index, ObjEnv *env) {
     }
     return evalInfixExpression(expr.binaryOperator, left, right);
   }
+  case ExpressionKind::ASSIGN: {
+    Value value = evalExpression(expr.rightExprIndex, env);
+    if (isError(value)) {
+      return value;
+    }
+    if (!envAssign(env, expr.literal, value)) {
+      return makeError("identifier not found: " + expr.literal);
+    }
+    return value;
+  }
   case ExpressionKind::LITERAL_STRING:
     return makeString(expr.literal);
 

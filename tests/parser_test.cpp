@@ -505,6 +505,64 @@ TEST(Parser, ParseGroupedExpressionMissingClosingParen) {
   EXPECT_EQ(index, -1);
 }
 
+TEST(Parser, ParseAssignExpression) {
+  std::vector<Token> tokens = tokenize("x = 5;");
+  Parser parser{tokens};
+
+  parser.parseExpressionStatement();
+
+  ASSERT_FALSE(parser.parserResult.statements.empty());
+  Expression root =
+      at(parser, parser.parserResult.statements[0].expressionIndex);
+  EXPECT_EQ(static_cast<int>(root.kind),
+            static_cast<int>(ExpressionKind::ASSIGN));
+  EXPECT_EQ(root.literal, "x");
+  EXPECT_DOUBLE_EQ(at(parser, root.rightExprIndex).numValue, 5.0);
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseAssignGroupsToTheRight) {
+  std::vector<Token> tokens = tokenize("a = b = 1;");
+  Parser parser{tokens};
+
+  parser.parseExpressionStatement();
+
+  ASSERT_FALSE(parser.parserResult.statements.empty());
+  Expression root =
+      at(parser, parser.parserResult.statements[0].expressionIndex);
+  EXPECT_EQ(root.literal, "a");
+
+  Expression right = at(parser, root.rightExprIndex);
+  EXPECT_EQ(static_cast<int>(right.kind),
+            static_cast<int>(ExpressionKind::ASSIGN));
+  EXPECT_EQ(right.literal, "b");
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseAssignTakesWholeExpression) {
+  std::vector<Token> tokens = tokenize("x = 1 + 2;");
+  Parser parser{tokens};
+
+  parser.parseExpressionStatement();
+
+  ASSERT_FALSE(parser.parserResult.statements.empty());
+  Expression root =
+      at(parser, parser.parserResult.statements[0].expressionIndex);
+  EXPECT_EQ(static_cast<int>(at(parser, root.rightExprIndex).binaryOperator),
+            static_cast<int>(BinaryOperator::ADD));
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseAssignToNonIdentifierIsError) {
+  std::vector<Token> tokens = tokenize("1 = 2;");
+  Parser parser{tokens};
+
+  parser.parseExpressionStatement();
+
+  ASSERT_FALSE(parser.errors.empty());
+  EXPECT_EQ(parser.errors[0], "Invalid assignment target");
+}
+
 TEST(Parser, ParseModuloBindsLikeMultiply) {
   std::vector<Token> tokens = tokenize("1 + 2 % 3;");
   Parser parser{tokens};

@@ -14,6 +14,7 @@ enum class ExpressionKind {
   INDEX,
   BINARY,
   UNARY,
+  ASSIGN,
   STAR,
   FUNCTION,
   CALL

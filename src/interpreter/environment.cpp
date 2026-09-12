@@ -25,3 +25,14 @@ Value envGet(ObjEnv *env, const std::string &name) {
 void envSet(ObjEnv *env, const std::string &name, const Value &value) {
   env->store[name] = value;
 }
+
+bool envAssign(ObjEnv *env, const std::string &name, const Value &value) {
+  for (ObjEnv *e = env; e != nullptr; e = e->outer) {
+    auto it = e->store.find(name);
+    if (it != e->store.end()) {
+      it->second = value;
+      return true;
+    }
+  }
+  return false;
+}

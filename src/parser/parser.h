@@ -10,6 +10,7 @@
 
 enum class Precedence {
   LOWEST,
+  ASSIGN,      // =
   LOGIC_OR,    // ||
   LOGIC_AND,   // &&
   EQUALS,      // ==
@@ -72,6 +73,9 @@ struct Parser {
     registerInfix(TokenType::Slash, binary);
     registerInfix(TokenType::Star, binary);
     registerInfix(TokenType::Percent, binary);
+    registerInfix(TokenType::Assign, [this](int leftExprIndex) {
+      return parseAssign(leftExprIndex);
+    });
     registerInfix(TokenType::And, binary);
     registerInfix(TokenType::Or, binary);
     registerInfix(TokenType::Equal, binary);
@@ -106,6 +110,7 @@ struct Parser {
   int parseString();
   int parseUnary();
   int parseBinary(int leftExprIndex);
+  int parseAssign(int leftExprIndex);
   int parseBoolean();
   int parseNull();
   int parseGroupedExpression();
