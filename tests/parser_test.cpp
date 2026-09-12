@@ -125,6 +125,32 @@ TEST(Parser, ParseBooleanFalse) {
   EXPECT_TRUE(parser.errors.empty());
 }
 
+TEST(Parser, ParseNull) {
+  std::vector<Token> tokens = tokenize("null;");
+  Parser parser{tokens};
+
+  int index = parser.parseNull();
+  Expression expression = parser.parserResult.expressions[index];
+
+  EXPECT_EQ(static_cast<int>(expression.kind),
+            static_cast<int>(ExpressionKind::LITERAL_NULL));
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, NullExpressionStatement) {
+  std::vector<Token> tokens = tokenize("null;");
+  Parser parser{tokens};
+
+  parser.parse();
+
+  ASSERT_EQ(parser.parserResult.statements.size(), 1u);
+  const Expression &expression =
+      at(parser, parser.parserResult.statements[0].expressionIndex);
+  EXPECT_EQ(static_cast<int>(expression.kind),
+            static_cast<int>(ExpressionKind::LITERAL_NULL));
+  EXPECT_TRUE(parser.errors.empty());
+}
+
 TEST(Parser, ParseUnaryBang) {
   std::vector<Token> tokens = tokenize("!5;");
   Parser parser{tokens};

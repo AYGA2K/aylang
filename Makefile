@@ -3,7 +3,8 @@
 BUILD_DIR := build
 TARGET    := aylang
 CMAKE_FLAGS ?= -DCMAKE_BUILD_TYPE=Debug
-EXAMPLE   := example.aylang
+# make run FILE=example.ay runs a file instead of starting the repl
+FILE      ?=
 
 all: build
 
@@ -15,7 +16,7 @@ build: $(BUILD_DIR)/CMakeCache.txt
 	cmake --build $(BUILD_DIR)
 
 run: build
-	$(BUILD_DIR)/$(TARGET)
+	$(BUILD_DIR)/$(TARGET) $(FILE)
 
 test: build
 	ctest --test-dir $(BUILD_DIR) --output-on-failure
@@ -28,8 +29,9 @@ rebuild: clean build
 help:
 	@echo "Targets:"
 	@echo "  make / build  - configure (if needed) and compile"
-	@echo "  make run      - build and run $(TARGET)"
-	@echo "  make test     - build and run $(TARGET) on $(EXAMPLE)"
+	@echo "  make run      - build and start the $(TARGET) repl"
+	@echo "  make run FILE=x.ay - build and run x.ay"
+	@echo "  make test     - build and run the unit tests"
 	@echo "  make clean    - remove $(BUILD_DIR)/"
 	@echo "  make rebuild  - clean then build"
 	@echo "Override CMAKE_FLAGS, e.g.: make CMAKE_FLAGS=\"-DCMAKE_BUILD_TYPE=Release\""

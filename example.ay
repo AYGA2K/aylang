@@ -1,0 +1,40 @@
+// comment example
+let x = 2 + 3 * 4;
+print("x is", x);
+
+let greet = fn(name) {
+  return "hello " + name;
+};
+print(greet("ayoub"));
+
+let fact = fn(n) {
+  if (n < 2) {
+    return 1;
+  }
+  return n * fact(n - 1);
+};
+print("5! =", fact(5));
+
+let adder = fn(a) {
+  return fn(b) {
+    return a + b;
+  };
+};
+let add2 = adder(2);
+print("add2(40) =", add2(40));
+
+let nums = [1, 2, 3];
+push(nums, 4);
+print("nums", nums, "len", len(nums));
+
+let ages = {"ayoub": 30};
+set(ages, "sam", 41);
+set(ages, "ayoub", 31);
+print("ages", ages, "len", len(ages));
+print("ayoub is", ages["ayoub"]);
+
+if (x > 10) {
+  print("x is big");
+} else {
+  print("x is small");
+}

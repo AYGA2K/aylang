@@ -258,6 +258,13 @@ int Parser::parseBoolean() {
   return static_cast<int>(parserResult.expressions.size()) - 1;
 }
 
+int Parser::parseNull() {
+  Expression expression;
+  expression.kind = ExpressionKind::LITERAL_NULL;
+  parserResult.expressions.push_back(expression);
+  return static_cast<int>(parserResult.expressions.size()) - 1;
+}
+
 int Parser::parseGroupedExpression() {
   current++; // skip "("
   int exprIndex = parseExpression(Precedence::LOWEST);

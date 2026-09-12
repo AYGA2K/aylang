@@ -12,8 +12,8 @@
 #include <utility>
 #include <vector>
 
-inline constexpr std::array<std::string, 4> builtinFuncs = {"print", "len",
-                                                            "push", "set"};
+inline constexpr std::array<std::string, 5> builtinFuncs = {
+    "print", "len", "push", "set", "has"};
 
 bool isBuiltIn(std::string name) {
   for (std::string builtin : builtinFuncs) {
@@ -55,14 +55,27 @@ Value Evaluator::evalExpression(int index, ObjEnv *env) {
     return makeNumber(expr.numValue);
   case ExpressionKind::LITERAL_BOOL:
     return makeBool(expr.boolValue);
+  case ExpressionKind::LITERAL_NULL:
+    return makeNull();
   case ExpressionKind::UNARY: {
     Value value = evalExpression(expr.subExprIndex, env);
+    if (isError(value)) {
+      return value;
+    }
     return evalPrefixExpression(expr.unaryOperator, value);
   }
   case ExpressionKind::BINARY: {
     Value left = evalExpression(expr.leftExprIndex, env);
+    // A failed operand is reported as it happened, instead of turning into
+    // an "unknown operator" about the error value itself.
+    if (isError(left)) {
+      return left;
+    }
     Rooted rootLeft(left); // it must survive eval right expression
     Value right = evalExpression(expr.rightExprIndex, env);
+    if (isError(right)) {
+      return right;
+    }
     return evalInfixExpression(expr.binaryOperator, left, right);
   }
   case ExpressionKind::LITERAL_STRING:
@@ -298,6 +311,11 @@ static bool argsFailed(const std::vector<Value> &args) {
   return args.size() == 1 && isError(args[0]);
 }
 
+static Value hashMapKeyError(const Value &key) {
+  return makeError("hash map key must be a number, string, bool or null: " +
+                   valueKindToString(kindOf(key)));
+}
+
 Value Evaluator::lookupVariableArg(const std::string &funcName,
                                    int argExprIndex, ObjEnv *env) {
   const Expression &expr = parserResult.expressions[argExprIndex];
@@ -392,10 +410,8 @@ Value Evaluator::evalSet(const std::vector<int> &argExprIndexes, ObjEnv *env) {
   if (isError(key)) {
     return key;
   }
-  if (!isString(key)) {
-    std::string message = "key argument to set is not a string: " +
-                          valueKindToString(kindOf(key));
-    return makeError(message);
+  if (!isValidHashMapKey(key)) {
+    return hashMapKeyError(key);
   }
   Value value = evalExpression(argExprIndexes[2], env);
   if (isError(value)) {
@@ -403,6 +419,32 @@ Value Evaluator::evalSet(const std::vector<int> &argExprIndexes, ObjEnv *env) {
   }
   hashMapSet(asHashMap(hashMap), key, value);
   return value;
+}
+
+Value Evaluator::evalHas(const std::vector<int> &argExprIndexes, ObjEnv *env) {
+  if (argExprIndexes.size() != 2) {
+    return wrongArgCountError(argExprIndexes.size(), 2);
+  }
+  Value hashMap = lookupVariableArg("has", argExprIndexes[0], env);
+  Rooted rootHashMap(hashMap); // survives evaluating the key
+  if (isError(hashMap)) {
+    return hashMap;
+  }
+  if (!isHashMap(hashMap)) {
+    std::string message = "argument to has is not a hashMap: " +
+                          valueKindToString(kindOf(hashMap));
+    return makeError(message);
+  }
+  Value key = evalExpression(argExprIndexes[1], env);
+  if (isError(key)) {
+    return key;
+  }
+
+  if (!isValidHashMapKey(key)) {
+    return hashMapKeyError(key);
+  }
+
+  return makeBool(hashMapHas(asHashMap(hashMap), key));
 }
 
 Value Evaluator::evalBuiltinFuncs(std::string funcName,
@@ -419,6 +461,9 @@ Value Evaluator::evalBuiltinFuncs(std::string funcName,
   }
   if (funcName == "set") {
     return evalSet(argExprIndexes, env);
+  }
+  if (funcName == "has") {
+    return evalHas(argExprIndexes, env);
   }
   return {};
 }
@@ -469,6 +514,12 @@ Value Evaluator::evalHashMap(int index, ObjEnv *env) {
   for (size_t indx = 0; indx + 1 < pairs.size(); indx += 2) {
     Value key = evalExpression(pairs[indx], env);
     Rooted rootKey(key); // survives evaluating the value
+    if (isError(key)) {
+      return key;
+    }
+    if (!isValidHashMapKey(key)) {
+      return hashMapKeyError(key);
+    }
     Value value = evalExpression(pairs[indx + 1], env);
     // A repeated key in the literal keeps its last value
     hashMapSet(asHashMap(result), key, value);
@@ -511,11 +562,14 @@ Value Evaluator::evalArrayIndex(const Value &array, const Value &indexValue) {
 }
 
 Value Evaluator::evalHashMapIndex(const Value &hashMap, const Value &keyValue) {
+  if (!isValidHashMapKey(keyValue)) {
+    return hashMapKeyError(keyValue);
+  }
   const std::vector<Value> &entries = asHashMap(hashMap)->entries;
   for (size_t indx = 0; indx + 1 < entries.size(); indx += 2) {
     if (compare(BinaryOperator::EQUAL, entries[indx], keyValue)) {
       return entries[indx + 1];
     }
   }
-  return {};
+  return makeError("key not found: " + inspect(keyValue));
 }

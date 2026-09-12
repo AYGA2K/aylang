@@ -93,6 +93,10 @@ Value makeFunction(const std::vector<std::string> &parameters,
                    int bodyStmtIndex, ObjEnv *env);
 
 void hashMapSet(ObjHashMap *hashMap, const Value &key, const Value &value);
+bool hashMapHas(ObjHashMap *hashMap, const Value &key);
+// Arrays, hash maps and functions never compare equal, so a key of one of
+// those kinds could be stored but never found again.
+bool isValidHashMapKey(const Value &key);
 
 inline bool isObjKind(const Value &v, ObjKind k) {
   return v.tag == Tag::Obj && v.obj->kind == k;

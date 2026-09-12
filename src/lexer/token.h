@@ -39,6 +39,7 @@ enum class TokenType {
   Let,
   True,
   False,
+  Null,
 
   // Operators
   Function,

@@ -2,10 +2,13 @@
 #include "interpreter/value.h"
 #include "lexer/lexer.h"
 #include "parser/parser.h"
+#include <cstdio>
 #include <cstdlib>
+#include <fstream>
 #include <print>
 #include <readline/history.h>
 #include <readline/readline.h>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -31,7 +34,43 @@ static bool isDeclarationStatement(const ParserResult &parserResult,
              ExpressionKind::FUNCTION;
 }
 
-int main() {
+static bool readFile(const char *path, std::string &source) {
+  std::ifstream file(path);
+  if (!file) {
+    return false;
+  }
+  std::ostringstream buffer;
+  buffer << file.rdbuf();
+  source = buffer.str();
+  return true;
+}
+
+static int runFile(const char *path) {
+  std::string source;
+  if (!readFile(path, source)) {
+    std::println(stderr, "could not read {}", path);
+    return 1;
+  }
+  Lexer lexer{.input = source};
+  std::vector<Token> tokens = lexer.tokenize();
+  Parser parser{tokens};
+  parser.parse();
+  if (!parser.errors.empty()) {
+    for (const std::string &error : parser.errors) {
+      std::println(stderr, "{}", error);
+    }
+    return 1;
+  }
+  Evaluator evaluator{.parserResult = parser.parserResult};
+  Value result = evaluator.evalStatements();
+  if (isError(result)) {
+    std::println(stderr, "{}", inspect(result));
+    return 1;
+  }
+  return 0;
+}
+
+static int runRepl() {
   std::string input;
   Evaluator evaluator;
   std::vector<Token> tokens;
@@ -87,4 +126,11 @@ int main() {
   }
   std::println("");
   return 0;
+}
+
+int main(int argc, char **argv) {
+  if (argc > 1) {
+    return runFile(argv[1]);
+  }
+  return runRepl();
 }

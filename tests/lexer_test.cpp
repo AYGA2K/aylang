@@ -72,6 +72,16 @@ TEST(Lexer, KeywordsVsIdentifiers) {
                });
 }
 
+TEST(Lexer, LiteralKeywords) {
+  expectTokens("true false null nullable",
+               {
+                   {TokenType::True, "true"},
+                   {TokenType::False, "false"},
+                   {TokenType::Null, "null"},
+                   {TokenType::Identifier, "nullable"},
+               });
+}
+
 TEST(Lexer, VariableDeclaration) {
   expectTokens("let x = 5;", {
                                  {TokenType::Let, "let"},

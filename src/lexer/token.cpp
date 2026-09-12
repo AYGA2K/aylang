@@ -76,6 +76,8 @@ std::string tokenTypeToString(TokenType type) {
   case TokenType::False:
     return "False";
     break;
+  case TokenType::Null:
+    return "Null";
   }
   return "Unknown";
 }

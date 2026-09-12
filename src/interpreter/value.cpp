@@ -51,6 +51,20 @@ void hashMapSet(ObjHashMap *hashMap, const Value &key, const Value &value) {
   entries.push_back(value);
 }
 
+bool isValidHashMapKey(const Value &key) {
+  return isNumber(key) || isBool(key) || isString(key) || isNull(key);
+}
+
+bool hashMapHas(ObjHashMap *hashMap, const Value &key) {
+  std::vector<Value> &entries = hashMap->entries;
+  for (size_t indx = 0; indx + 1 < entries.size(); indx += 2) {
+    if (compare(BinaryOperator::EQUAL, entries[indx], key)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 ValueKind kindOf(const Value &value) {
   switch (value.tag) {
   case Tag::Null:

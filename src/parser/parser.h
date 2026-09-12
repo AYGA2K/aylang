@@ -48,6 +48,7 @@ struct Parser {
     registerPrefix(TokenType::String, [this] { return parseString(); });
     registerPrefix(TokenType::False, [this] { return parseBoolean(); });
     registerPrefix(TokenType::True, [this] { return parseBoolean(); });
+    registerPrefix(TokenType::Null, [this] { return parseNull(); });
     registerPrefix(TokenType::LParen,
                    [this] { return parseGroupedExpression(); });
 
@@ -101,6 +102,7 @@ struct Parser {
   int parseUnary();
   int parseBinary(int leftExprIndex);
   int parseBoolean();
+  int parseNull();
   int parseGroupedExpression();
   int parseIndexExpression(int leftExprIndex);
   int parseIfStatement();

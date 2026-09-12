@@ -36,6 +36,7 @@ struct Evaluator {
   Value evalLen(const std::vector<int> &argExprIndexes, ObjEnv *env);
   Value evalPush(const std::vector<int> &argExprIndexes, ObjEnv *env);
   Value evalSet(const std::vector<int> &argExprIndexes, ObjEnv *env);
+  Value evalHas(const std::vector<int> &argExprIndexes, ObjEnv *env);
   Value lookupVariableArg(const std::string &funcName, int argExprIndex,
                           ObjEnv *env);
 
