@@ -32,6 +32,7 @@ enum class BinaryOperator {
   SUBTRACT,
   MULTIPLY,
   DIVIDE,
+  MODULO,
 };
 
 enum class UnaryOperator {

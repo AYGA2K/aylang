@@ -36,6 +36,8 @@ std::string binaryOperatorToString(BinaryOperator oper) {
     return "*";
   case BinaryOperator::DIVIDE:
     return "/";
+  case BinaryOperator::MODULO:
+    return "%";
   }
   return "";
 }

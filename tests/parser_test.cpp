@@ -505,6 +505,63 @@ TEST(Parser, ParseGroupedExpressionMissingClosingParen) {
   EXPECT_EQ(index, -1);
 }
 
+TEST(Parser, ParseModuloBindsLikeMultiply) {
+  std::vector<Token> tokens = tokenize("1 + 2 % 3;");
+  Parser parser{tokens};
+
+  parser.parseExpressionStatement();
+
+  ASSERT_FALSE(parser.parserResult.statements.empty());
+  Expression root =
+      at(parser, parser.parserResult.statements[0].expressionIndex);
+  EXPECT_EQ(static_cast<int>(root.binaryOperator),
+            static_cast<int>(BinaryOperator::ADD));
+
+  Expression right = at(parser, root.rightExprIndex);
+  EXPECT_EQ(static_cast<int>(right.binaryOperator),
+            static_cast<int>(BinaryOperator::MODULO));
+  EXPECT_DOUBLE_EQ(at(parser, right.leftExprIndex).numValue, 2.0);
+  EXPECT_DOUBLE_EQ(at(parser, right.rightExprIndex).numValue, 3.0);
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseAndBindsTighterThanOr) {
+  std::vector<Token> tokens = tokenize("a || b && c;");
+  Parser parser{tokens};
+
+  parser.parseExpressionStatement();
+
+  ASSERT_FALSE(parser.parserResult.statements.empty());
+  Expression root =
+      at(parser, parser.parserResult.statements[0].expressionIndex);
+  EXPECT_EQ(static_cast<int>(root.binaryOperator),
+            static_cast<int>(BinaryOperator::OR));
+  EXPECT_EQ(at(parser, root.leftExprIndex).literal, "a");
+
+  Expression right = at(parser, root.rightExprIndex);
+  EXPECT_EQ(static_cast<int>(right.binaryOperator),
+            static_cast<int>(BinaryOperator::AND));
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseComparisonBindsTighterThanAnd) {
+  std::vector<Token> tokens = tokenize("1 < 2 && 3 > 2;");
+  Parser parser{tokens};
+
+  parser.parseExpressionStatement();
+
+  ASSERT_FALSE(parser.parserResult.statements.empty());
+  Expression root =
+      at(parser, parser.parserResult.statements[0].expressionIndex);
+  EXPECT_EQ(static_cast<int>(root.binaryOperator),
+            static_cast<int>(BinaryOperator::AND));
+  EXPECT_EQ(static_cast<int>(at(parser, root.leftExprIndex).binaryOperator),
+            static_cast<int>(BinaryOperator::LESS_THAN));
+  EXPECT_EQ(static_cast<int>(at(parser, root.rightExprIndex).binaryOperator),
+            static_cast<int>(BinaryOperator::GREATER_THAN));
+  EXPECT_TRUE(parser.errors.empty());
+}
+
 TEST(Parser, ParseGroupedExpressionOverridesPrecedence) {
   std::vector<Token> tokens = tokenize("(1 + 2) * 3;");
   Parser parser{tokens};

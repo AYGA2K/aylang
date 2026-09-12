@@ -810,6 +810,143 @@ TEST(Evaluator, EvalBinaryRightNotEvaluatedAfterErrorLeft) {
   EXPECT_EQ(output, "");
 }
 
+TEST(Evaluator, EvalModulo) {
+  Value value = eval("7 % 2;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 1.0);
+}
+
+TEST(Evaluator, EvalModuloExact) {
+  Value value = eval("8 % 4;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 0.0);
+}
+
+TEST(Evaluator, EvalModuloFloat) {
+  Value value = eval("7.5 % 2;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 1.5);
+}
+
+TEST(Evaluator, EvalModuloNegative) {
+  Value value = eval("-7 % 2;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, -1.0);
+}
+
+TEST(Evaluator, EvalModuloBindsTighterThanAdd) {
+  Value value = eval("2 + 3 % 2;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 3.0);
+}
+
+TEST(Evaluator, EvalModuloOnStringIsError) {
+  Value value = eval("\"a\" % 2;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value), "unknown operator: Str % Number");
+}
+
+TEST(Evaluator, EvalAndBothTrue) {
+  Value value = eval("true && true;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Bool));
+  EXPECT_TRUE(value.boolean);
+}
+
+TEST(Evaluator, EvalAndOneFalse) {
+  Value value = eval("true && false;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Bool));
+  EXPECT_FALSE(value.boolean);
+}
+
+TEST(Evaluator, EvalOrOneTrue) {
+  Value value = eval("false || true;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Bool));
+  EXPECT_TRUE(value.boolean);
+}
+
+TEST(Evaluator, EvalOrBothFalse) {
+  Value value = eval("false || false;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Bool));
+  EXPECT_FALSE(value.boolean);
+}
+
+TEST(Evaluator, EvalAndOnComparisons) {
+  Value value = eval("1 < 2 && 3 > 2;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Bool));
+  EXPECT_TRUE(value.boolean);
+}
+
+TEST(Evaluator, EvalAndOnNullIsFalse) {
+  Value value = eval("null && true;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Bool));
+  EXPECT_FALSE(value.boolean);
+}
+
+TEST(Evaluator, EvalOrOnZeroIsTrue) {
+  Value value = eval("0 || false;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Bool));
+  EXPECT_TRUE(value.boolean);
+}
+
+TEST(Evaluator, EvalAndOnStringIsTrue) {
+  Value value = eval("\"a\" && \"b\";");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Bool));
+  EXPECT_TRUE(value.boolean);
+}
+
+TEST(Evaluator, EvalAndShortCircuitsFalseLeft) {
+  std::string output;
+  Value value = evalCapturingOutput("false && print(\"ran\");", output);
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Bool));
+  EXPECT_FALSE(value.boolean);
+  EXPECT_EQ(output, "");
+}
+
+TEST(Evaluator, EvalOrShortCircuitsTrueLeft) {
+  std::string output;
+  Value value = evalCapturingOutput("true || print(\"ran\");", output);
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Bool));
+  EXPECT_TRUE(value.boolean);
+  EXPECT_EQ(output, "");
+}
+
+TEST(Evaluator, EvalAndShortCircuitSkipsError) {
+  Value value = eval("false && nope;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Bool));
+  EXPECT_FALSE(value.boolean);
+}
+
+TEST(Evaluator, EvalAndRightErrorPropagates) {
+  Value value = eval("true && nope;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value), "identifier not found: nope");
+}
+
+TEST(Evaluator, EvalAndGuardsMissingKey) {
+  Value value = eval("let h = {\"a\": 5}; has(h, \"z\") && h[\"z\"] > 1;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Bool));
+  EXPECT_FALSE(value.boolean);
+}
+
 TEST(Evaluator, EvalStringAddConcatenates) {
   Value value = eval("\"foo\" + \"bar\";");
 

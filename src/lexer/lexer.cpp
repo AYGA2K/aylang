@@ -81,6 +81,8 @@ Token Lexer::nextToken() {
     return Token{.type = TokenType::Minus, .literal = "-"};
   case '*':
     return Token{.type = TokenType::Star, .literal = "*"};
+  case '%':
+    return Token{.type = TokenType::Percent, .literal = "%"};
   case '/':
     if (peekChar() == '/') {
       while (peekChar() != '\0' && peekChar() != '\n') {

@@ -28,18 +28,19 @@ void expectTokens(const std::string &input,
 }
 
 TEST(Lexer, SingleCharOperatorsAndPunctuation) {
-  expectTokens("(){},;+-*/", {
-                                 {TokenType::LParen, "("},
-                                 {TokenType::RParen, ")"},
-                                 {TokenType::LBrace, "{"},
-                                 {TokenType::RBrace, "}"},
-                                 {TokenType::Comma, ","},
-                                 {TokenType::Semicolon, ";"},
-                                 {TokenType::Plus, "+"},
-                                 {TokenType::Minus, "-"},
-                                 {TokenType::Star, "*"},
-                                 {TokenType::Slash, "/"},
-                             });
+  expectTokens("(){},;+-*/%", {
+                                  {TokenType::LParen, "("},
+                                  {TokenType::RParen, ")"},
+                                  {TokenType::LBrace, "{"},
+                                  {TokenType::RBrace, "}"},
+                                  {TokenType::Comma, ","},
+                                  {TokenType::Semicolon, ";"},
+                                  {TokenType::Plus, "+"},
+                                  {TokenType::Minus, "-"},
+                                  {TokenType::Star, "*"},
+                                  {TokenType::Slash, "/"},
+                                  {TokenType::Percent, "%"},
+                              });
 }
 
 TEST(Lexer, TwoCharAndComparisonOperators) {

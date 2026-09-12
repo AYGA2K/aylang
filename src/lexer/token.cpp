@@ -21,6 +21,8 @@ std::string tokenTypeToString(TokenType type) {
     return "Star";
   case TokenType::Slash:
     return "Slash";
+  case TokenType::Percent:
+    return "Percent";
   case TokenType::LParen:
     return "LParen";
   case TokenType::RParen:

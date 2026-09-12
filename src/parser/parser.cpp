@@ -16,6 +16,9 @@ std::unordered_map<TokenType, Precedence> precedences{
     {TokenType::Plus, Precedence::SUM},
     {TokenType::Slash, Precedence::PRODUCT},
     {TokenType::Star, Precedence::PRODUCT},
+    {TokenType::Percent, Precedence::PRODUCT},
+    {TokenType::And, Precedence::LOGIC_AND},
+    {TokenType::Or, Precedence::LOGIC_OR},
     {TokenType::LParen, Precedence::CALL},
     {TokenType::LBrack, Precedence::INDEX},
 };
@@ -230,6 +233,12 @@ int Parser::parseBinary(int leftExprIndex) {
     expression.binaryOperator = BinaryOperator::MULTIPLY;
   } else if (type == TokenType::Slash) {
     expression.binaryOperator = BinaryOperator::DIVIDE;
+  } else if (type == TokenType::Percent) {
+    expression.binaryOperator = BinaryOperator::MODULO;
+  } else if (type == TokenType::And) {
+    expression.binaryOperator = BinaryOperator::AND;
+  } else if (type == TokenType::Or) {
+    expression.binaryOperator = BinaryOperator::OR;
   } else if (type == TokenType::Equal) {
     expression.binaryOperator = BinaryOperator::EQUAL;
   } else if (type == TokenType::NotEqual) {

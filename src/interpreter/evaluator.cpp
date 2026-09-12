@@ -6,6 +6,7 @@
 #include "parser/parser.h"
 #include "parser/statement.h"
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <print>
 #include <string>
@@ -70,6 +71,13 @@ Value Evaluator::evalExpression(int index, ObjEnv *env) {
     // an "unknown operator" about the error value itself.
     if (isError(left)) {
       return left;
+    }
+    // Evaluate right only when it can change the answer
+    if (expr.binaryOperator == BinaryOperator::AND && !isTruthy(left)) {
+      return makeBool(false);
+    }
+    if (expr.binaryOperator == BinaryOperator::OR && isTruthy(left)) {
+      return makeBool(true);
     }
     Rooted rootLeft(left); // it must survive eval right expression
     Value right = evalExpression(expr.rightExprIndex, env);
@@ -152,19 +160,17 @@ Value Evaluator::evalInfixExpression(BinaryOperator oper,
   case BinaryOperator::GREATER_THAN_OR_EQUAL:
     return makeBool(compare(oper, leftValue, rightValue));
   case BinaryOperator::AND:
-  case BinaryOperator::OR:
-    if (isNumeric(leftValue) && isNumeric(rightValue)) {
-      // A number is true when nonzero.
-      bool left = asNumber(leftValue) != 0;
-      bool right = asNumber(rightValue) != 0;
-      bool result = oper == BinaryOperator::AND ? left && right : left || right;
-      return makeBool(result);
-    }
-    break;
+  case BinaryOperator::OR: {
+    bool left = isTruthy(leftValue);
+    bool right = isTruthy(rightValue);
+    return makeBool(oper == BinaryOperator::AND ? left && right
+                                                : left || right);
+  }
   case BinaryOperator::ADD:
   case BinaryOperator::SUBTRACT:
   case BinaryOperator::MULTIPLY:
   case BinaryOperator::DIVIDE:
+  case BinaryOperator::MODULO:
     if (isNumeric(leftValue) && isNumeric(rightValue)) {
       double left = asNumber(leftValue);
       double right = asNumber(rightValue);
@@ -182,6 +188,10 @@ Value Evaluator::evalInfixExpression(BinaryOperator oper,
 
       if (oper == BinaryOperator::DIVIDE) {
         return makeNumber(left / right);
+      }
+
+      if (oper == BinaryOperator::MODULO) {
+        return makeNumber(std::fmod(left, right));
       }
     }
     if (oper == BinaryOperator::ADD && isString(leftValue) &&

@@ -10,10 +10,12 @@
 
 enum class Precedence {
   LOWEST,
+  LOGIC_OR,    // ||
+  LOGIC_AND,   // &&
   EQUALS,      // ==
   LESSGREATER, // > or <
   SUM,         // +
-  PRODUCT,     // *
+  PRODUCT,     // * or %
   UNARY,       // -X or !X
   CALL,        // myFunction(X)
   INDEX        // array[index]
@@ -69,6 +71,9 @@ struct Parser {
     registerInfix(TokenType::Minus, binary);
     registerInfix(TokenType::Slash, binary);
     registerInfix(TokenType::Star, binary);
+    registerInfix(TokenType::Percent, binary);
+    registerInfix(TokenType::And, binary);
+    registerInfix(TokenType::Or, binary);
     registerInfix(TokenType::Equal, binary);
     registerInfix(TokenType::NotEqual, binary);
     registerInfix(TokenType::LessThan, binary);
