@@ -648,6 +648,120 @@ TEST(Parser, ParseGroupedExpressionOverridesPrecedence) {
   EXPECT_TRUE(parser.errors.empty());
 }
 
+TEST(Parser, ParseWhileStatement) {
+  std::vector<Token> tokens = tokenize("while (x) { y; }");
+  Parser parser{tokens};
+
+  int index = parser.parseWhileStatement();
+  ASSERT_GE(index, 0);
+  Statement statement = parser.parserResult.statements[index];
+
+  EXPECT_EQ(static_cast<int>(statement.kind),
+            static_cast<int>(StatementKind::WHILE));
+  ASSERT_GE(statement.conditionExprIndex, 0);
+  Expression condition = at(parser, statement.conditionExprIndex);
+  EXPECT_EQ(static_cast<int>(condition.kind),
+            static_cast<int>(ExpressionKind::IDENTIFIER));
+  EXPECT_EQ(condition.literal, "x");
+
+  ASSERT_GE(statement.bodyStmtIndex, 0);
+  Statement block = parser.parserResult.statements[statement.bodyStmtIndex];
+  EXPECT_EQ(static_cast<int>(block.kind),
+            static_cast<int>(StatementKind::BLOCK));
+  ASSERT_EQ(block.statementsIndexes.size(), 1u);
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseWhileBinaryCondition) {
+  std::vector<Token> tokens = tokenize("while (i < 3) { i = i + 1; }");
+  Parser parser{tokens};
+
+  int index = parser.parseWhileStatement();
+  ASSERT_GE(index, 0);
+  Statement statement = parser.parserResult.statements[index];
+
+  Expression condition = at(parser, statement.conditionExprIndex);
+  EXPECT_EQ(static_cast<int>(condition.kind),
+            static_cast<int>(ExpressionKind::BINARY));
+  EXPECT_EQ(static_cast<int>(condition.binaryOperator),
+            static_cast<int>(BinaryOperator::LESS_THAN));
+
+  Statement block = parser.parserResult.statements[statement.bodyStmtIndex];
+  ASSERT_EQ(block.statementsIndexes.size(), 1u);
+  Statement body = parser.parserResult.statements[block.statementsIndexes[0]];
+  EXPECT_EQ(static_cast<int>(at(parser, body.expressionIndex).kind),
+            static_cast<int>(ExpressionKind::ASSIGN));
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseWhileEmptyBody) {
+  std::vector<Token> tokens = tokenize("while (true) {}");
+  Parser parser{tokens};
+
+  int index = parser.parseWhileStatement();
+  ASSERT_GE(index, 0);
+  Statement statement = parser.parserResult.statements[index];
+
+  Statement block = parser.parserResult.statements[statement.bodyStmtIndex];
+  EXPECT_TRUE(block.statementsIndexes.empty());
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseWhileStatementFromParse) {
+  std::vector<Token> tokens = tokenize("while (x) { y; }");
+  Parser parser{tokens};
+
+  parser.parse();
+
+  ASSERT_EQ(parser.parserResult.programStatementsIndexes.size(), 1u);
+  Statement statement =
+      parser.parserResult
+          .statements[parser.parserResult.programStatementsIndexes[0]];
+  EXPECT_EQ(static_cast<int>(statement.kind),
+            static_cast<int>(StatementKind::WHILE));
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseWhileNested) {
+  std::vector<Token> tokens = tokenize("while (a) { while (b) { c; } }");
+  Parser parser{tokens};
+
+  int index = parser.parseWhileStatement();
+  ASSERT_GE(index, 0);
+  Statement statement = parser.parserResult.statements[index];
+
+  Statement block = parser.parserResult.statements[statement.bodyStmtIndex];
+  ASSERT_EQ(block.statementsIndexes.size(), 1u);
+  Statement inner = parser.parserResult.statements[block.statementsIndexes[0]];
+  EXPECT_EQ(static_cast<int>(inner.kind),
+            static_cast<int>(StatementKind::WHILE));
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseWhileMissingOpenParen) {
+  std::vector<Token> tokens = tokenize("while x { y; }");
+  Parser parser{tokens};
+
+  int index = parser.parseWhileStatement();
+
+  EXPECT_EQ(index, -1);
+  ASSERT_FALSE(parser.errors.empty());
+  EXPECT_EQ(parser.errors[0],
+            expectedTokenError(TokenType::LParen, TokenType::Identifier));
+}
+
+TEST(Parser, ParseWhileMissingBlock) {
+  std::vector<Token> tokens = tokenize("while (x) y;");
+  Parser parser{tokens};
+
+  int index = parser.parseWhileStatement();
+
+  EXPECT_EQ(index, -1);
+  ASSERT_FALSE(parser.errors.empty());
+  EXPECT_EQ(parser.errors[0],
+            expectedTokenError(TokenType::LBrace, TokenType::Identifier));
+}
+
 TEST(Parser, ParseIfStatement) {
   std::vector<Token> tokens = tokenize("if (x) { y; }");
   Parser parser{tokens};

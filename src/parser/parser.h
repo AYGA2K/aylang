@@ -116,6 +116,7 @@ struct Parser {
   int parseGroupedExpression();
   int parseIndexExpression(int leftExprIndex);
   int parseIfStatement();
+  int parseWhileStatement();
   int parseBlockStatement();
   int parseFunction();
   int parseArray();

@@ -810,6 +810,118 @@ TEST(Evaluator, EvalBinaryRightNotEvaluatedAfterErrorLeft) {
   EXPECT_EQ(output, "");
 }
 
+TEST(Evaluator, EvalWhileCountsUp) {
+  Value value = eval("let i = 0; while (i < 3) { i = i + 1; } i;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 3.0);
+}
+
+TEST(Evaluator, EvalWhileFalseConditionSkipsBody) {
+  Value value = eval("let n = 0; while (false) { n = 99; } n;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 0.0);
+}
+
+TEST(Evaluator, EvalWhileNullConditionSkipsBody) {
+  Value value = eval("let n = 0; while (null) { n = 99; } n;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 0.0);
+}
+
+TEST(Evaluator, EvalWhileAccumulates) {
+  Value value =
+      eval("let sum = 0; let k = 1; while (k <= 4) { sum = sum + k; k = k + 1; }"
+           "sum;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 10.0);
+}
+
+TEST(Evaluator, EvalWhileNested) {
+  Value value = eval("let rows = 0; let a = 0;"
+                     "while (a < 2) {"
+                     "  let b = 0;"
+                     "  while (b < 2) { rows = rows + 1; b = b + 1; }"
+                     "  a = a + 1;"
+                     "}"
+                     "rows;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 4.0);
+}
+
+TEST(Evaluator, EvalWhileBodyRunsOnce) {
+  std::string output;
+  evalCapturingOutput("let i = 0; while (i < 1) { print(i); i = i + 1; }",
+                      output);
+
+  EXPECT_EQ(output, "0\n");
+}
+
+TEST(Evaluator, EvalWhileReturnLeavesLoop) {
+  Value value = eval("let f = fn() { let x = 1; while (true) { return x; }"
+                     "return 0; }; f();");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 1.0);
+}
+
+TEST(Evaluator, EvalWhileReturnsFirstMatch) {
+  Value value = eval("let firstEven = fn(limit) {"
+                     "  let x = 1;"
+                     "  while (x < limit) {"
+                     "    if (x % 2 == 0) { return x; }"
+                     "    x = x + 1;"
+                     "  }"
+                     "  return 0;"
+                     "}; firstEven(10);");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 2.0);
+}
+
+TEST(Evaluator, EvalWhileWithHasGuard) {
+  Value value = eval("let h = {\"a\": 1}; let c = 0;"
+                     "while (has(h, \"b\")) { c = 1; } c;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 0.0);
+}
+
+TEST(Evaluator, EvalWhileBuildsArray) {
+  Value value = eval("let arr = []; let i = 0;"
+                     "while (i < 3) { push(arr, i); i = i + 1; } arr;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Array));
+  ASSERT_EQ(items(value).size(), 3u);
+  EXPECT_DOUBLE_EQ(items(value)[0].num, 0.0);
+  EXPECT_DOUBLE_EQ(items(value)[2].num, 2.0);
+}
+
+TEST(Evaluator, EvalWhileConditionErrorIsReturned) {
+  Value value = eval("while (nope) { 1; }");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value), "identifier not found: nope");
+}
+
+TEST(Evaluator, EvalWhileBodyErrorStopsLoop) {
+  Value value = eval("let i = 0; while (i < 3) { nope; }");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value), "identifier not found: nope");
+}
+
+TEST(Evaluator, EvalWhileLaterConditionErrorIsReturned) {
+  Value value = eval("let i = 0; while (i < nope) { i = i + 1; }");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value), "identifier not found: nope");
+}
+
 TEST(Evaluator, EvalAssignRebindsVariable) {
   Value value = eval("let x = 1; x = 2; x;");
 
@@ -1600,6 +1712,79 @@ TEST(Evaluator, EvalUnboundNameIsError) {
 
   EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
   EXPECT_EQ(text(value), "identifier not found: nope");
+}
+
+TEST(Evaluator, EvalCallOnReturnedFunction) {
+  Value value = eval("let adder = fn(a) { return fn(b) { return a + b; }; };"
+                     "adder(2)(40);");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 42.0);
+}
+
+TEST(Evaluator, EvalCallOnFunctionLiteral) {
+  Value value = eval("fn(a) { return a * 2; }(21);");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 42.0);
+}
+
+TEST(Evaluator, EvalCallOnArrayElement) {
+  Value value = eval("let adder = fn(a) { return fn(b) { return a + b; }; };"
+                     "let fns = [adder(1), adder(10)]; fns[1](5);");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 15.0);
+}
+
+TEST(Evaluator, EvalCallOnHashValue) {
+  Value value = eval("let h = {\"double\": fn(a) { return a * 2; }};"
+                     "h[\"double\"](4);");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 8.0);
+}
+
+TEST(Evaluator, EvalCallOnGroupedFunction) {
+  Value value = eval("let f = fn(a) { return a; }; (f)(3);");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 3.0);
+}
+
+TEST(Evaluator, EvalCallOnNonFunctionExpressionIsError) {
+  Value value = eval("let nums = [1]; nums[0](2);");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value), "not a function: Number");
+}
+
+TEST(Evaluator, EvalCallOnNonFunctionNameKeepsName) {
+  Value value = eval("let notFn = 5; notFn(1);");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value), "notFn is not a function: Number");
+}
+
+TEST(Evaluator, EvalCallCalleeErrorPropagates) {
+  Value value = eval("let f = fn() { return nope; }; f()(1);");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value), "identifier not found: nope");
+}
+
+TEST(Evaluator, EvalCallBuiltinStillDispatchesByName) {
+  Value value = eval("len(\"abc\");");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 3.0);
+}
+
+TEST(Evaluator, EvalCallShadowedBuiltinNameStillDispatches) {
+  Value value = eval("let arr = [1, 2]; len(arr);");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 2.0);
 }
 
 TEST(Evaluator, EvalCallExpressionAddsArgs) {

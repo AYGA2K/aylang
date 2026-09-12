@@ -18,6 +18,7 @@ struct Evaluator {
   Value evalInfixExpression(BinaryOperator oper, const Value &leftValue,
                             const Value &rightValue);
   Value evalIfStatement(int index, ObjEnv *env);
+  Value evalWhileStatement(int index, ObjEnv *env);
   Value evalBlockStatement(int index, ObjEnv *env);
   Value evalLetStatement(int index, ObjEnv *env);
   Value evalFunctionExpression(const std::string &name,

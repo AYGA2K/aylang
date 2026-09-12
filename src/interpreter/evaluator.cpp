@@ -139,7 +139,8 @@ Value Evaluator::evalStatement(int index, ObjEnv *env) {
   }
   case StatementKind::EXPRESSION:
     return evalExpression(stmt.expressionIndex, env);
-    break;
+  case StatementKind::WHILE:
+    return evalWhileStatement(index, env);
   }
   return {};
 }
@@ -242,6 +243,22 @@ Value Evaluator::evalIfStatement(int index, ObjEnv *env) {
   return {};
 }
 
+Value Evaluator::evalWhileStatement(int index, ObjEnv *env) {
+  const Statement &stmt = parserResult.statements[index];
+  Value conditionValue = evalExpression(stmt.conditionExprIndex, env);
+  if (isError(conditionValue)) {
+    return conditionValue;
+  }
+  Value returnedValue;
+  while (isTruthy(conditionValue)) {
+    returnedValue = evalStatement(stmt.bodyStmtIndex, env);
+    if (isError(returnedValue) || returning) {
+      return returnedValue;
+    }
+    conditionValue = evalExpression(stmt.conditionExprIndex, env);
+  }
+  return returnedValue;
+}
 Value Evaluator::evalBlockStatement(int index, ObjEnv *env) {
   const Statement &stmt = parserResult.statements[index];
   Value returnedValue;
@@ -491,20 +508,26 @@ Value Evaluator::evalBuiltinFuncs(std::string funcName,
 Value Evaluator::evalCallExpression(int functionExprIndex,
                                     const std::vector<int> &argExprIndexes,
                                     ObjEnv *env) {
-  const std::string funcName =
-      parserResult.expressions[functionExprIndex].literal;
-  if (isBuiltIn(funcName)) {
-    return evalBuiltinFuncs(funcName, argExprIndexes, env);
+  if (functionExprIndex == -1) {
+    return makeError("invalid expression");
   }
-  Value function = envGet(env, funcName);
+  const Expression &callee = parserResult.expressions[functionExprIndex];
+  bool isNamed = callee.kind == ExpressionKind::IDENTIFIER;
+  // Builtins are not values, so they are reachable only through their name
+  if (isNamed && isBuiltIn(callee.literal)) {
+    return evalBuiltinFuncs(callee.literal, argExprIndexes, env);
+  }
+  // Any expression can be the callee, so that a function returned by a call
+  // or held in an array can be called where it stands
+  Value function = evalExpression(functionExprIndex, env);
   Rooted rootFunction(function); // survives evaluating the arguments
   if (isError(function)) {
     return function;
   }
   if (!isFunction(function)) {
-    std::string message =
-        funcName + " is not a function: " + valueKindToString(kindOf(function));
-    return makeError(message);
+    std::string what = isNamed ? callee.literal + " is not a function: "
+                               : "not a function: ";
+    return makeError(what + valueKindToString(kindOf(function)));
   }
   std::vector<Value> args = evalExpressions(argExprIndexes, env);
   RootedVector rootArgs(args); // survive the call itself

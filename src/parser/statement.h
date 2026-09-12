@@ -8,6 +8,7 @@ enum class StatementKind {
   EXPRESSION,
   BLOCK,
   IF,
+  WHILE,
 };
 
 struct Statement {
@@ -23,8 +24,11 @@ struct Statement {
   // Block statements indexes
   std::vector<int> statementsIndexes;
 
-  // If Statement
+  // If Statement, and the condition of a While Statement
   int conditionExprIndex = -1;
   int consequenceStmtIndex = -1;
   int alternativeStmtIndex = -1;
+
+  // While Statement
+  int bodyStmtIndex = -1;
 };

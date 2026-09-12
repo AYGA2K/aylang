@@ -83,8 +83,10 @@ int Parser::parseStatement() {
   case TokenType::If:
     parseIfStatement();
     break;
-  case TokenType::Else:
   case TokenType::While:
+    parseWhileStatement();
+    break;
+  case TokenType::Else:
     errors.push_back("Unexpected token " +
                      tokenTypeToString(currentToken().type));
     return -1;
@@ -327,6 +329,32 @@ int Parser::parseIfStatement() {
     } else {
       statement.alternativeStmtIndex = parseBlockStatement();
     }
+  }
+  parserResult.statements.push_back(statement);
+  return static_cast<int>(parserResult.statements.size()) - 1;
+}
+
+// Parses "while (condition) { ... }"
+int Parser::parseWhileStatement() {
+  if (!nextTokenIs(TokenType::LParen)) {
+    errors.push_back(expectedTokenError(TokenType::LParen, nextToken().type));
+    return -1;
+  }
+  Statement statement;
+  statement.kind = StatementKind::WHILE;
+  current++; // move to "("
+  statement.conditionExprIndex = parseExpression(Precedence::LOWEST);
+  if (statement.conditionExprIndex == -1) {
+    return -1;
+  }
+  if (!currentTokenIs(TokenType::RParen)) {
+    errors.push_back(
+        expectedTokenError(TokenType::RParen, currentToken().type));
+    return -1;
+  }
+  statement.bodyStmtIndex = parseBlockStatement();
+  if (statement.bodyStmtIndex == -1) {
+    return -1;
   }
   parserResult.statements.push_back(statement);
   return static_cast<int>(parserResult.statements.size()) - 1;
