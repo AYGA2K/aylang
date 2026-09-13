@@ -516,8 +516,46 @@ TEST(Parser, ParseAssignExpression) {
       at(parser, parser.parserResult.statements[0].expressionIndex);
   EXPECT_EQ(static_cast<int>(root.kind),
             static_cast<int>(ExpressionKind::ASSIGN));
-  EXPECT_EQ(root.literal, "x");
+  EXPECT_EQ(at(parser, root.leftExprIndex).literal, "x");
   EXPECT_DOUBLE_EQ(at(parser, root.rightExprIndex).numValue, 5.0);
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseAssignToArrayElement) {
+  std::vector<Token> tokens = tokenize("arr[0] = 5;");
+  Parser parser{tokens};
+
+  parser.parseExpressionStatement();
+
+  ASSERT_FALSE(parser.parserResult.statements.empty());
+  Expression root =
+      at(parser, parser.parserResult.statements[0].expressionIndex);
+  EXPECT_EQ(static_cast<int>(root.kind),
+            static_cast<int>(ExpressionKind::ASSIGN));
+
+  Expression target = at(parser, root.leftExprIndex);
+  EXPECT_EQ(static_cast<int>(target.kind),
+            static_cast<int>(ExpressionKind::INDEX));
+  EXPECT_EQ(target.literal, "arr");
+  EXPECT_DOUBLE_EQ(at(parser, target.subExprIndex).numValue, 0.0);
+  EXPECT_DOUBLE_EQ(at(parser, root.rightExprIndex).numValue, 5.0);
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseAssignToHashKey) {
+  std::vector<Token> tokens = tokenize("map[\"k\"] = 1;");
+  Parser parser{tokens};
+
+  parser.parseExpressionStatement();
+
+  ASSERT_FALSE(parser.parserResult.statements.empty());
+  Expression root =
+      at(parser, parser.parserResult.statements[0].expressionIndex);
+  Expression target = at(parser, root.leftExprIndex);
+  EXPECT_EQ(static_cast<int>(target.kind),
+            static_cast<int>(ExpressionKind::INDEX));
+  EXPECT_EQ(target.literal, "map");
+  EXPECT_EQ(at(parser, target.subExprIndex).literal, "k");
   EXPECT_TRUE(parser.errors.empty());
 }
 
@@ -530,12 +568,12 @@ TEST(Parser, ParseAssignGroupsToTheRight) {
   ASSERT_FALSE(parser.parserResult.statements.empty());
   Expression root =
       at(parser, parser.parserResult.statements[0].expressionIndex);
-  EXPECT_EQ(root.literal, "a");
+  EXPECT_EQ(at(parser, root.leftExprIndex).literal, "a");
 
   Expression right = at(parser, root.rightExprIndex);
   EXPECT_EQ(static_cast<int>(right.kind),
             static_cast<int>(ExpressionKind::ASSIGN));
-  EXPECT_EQ(right.literal, "b");
+  EXPECT_EQ(at(parser, right.leftExprIndex).literal, "b");
   EXPECT_TRUE(parser.errors.empty());
 }
 

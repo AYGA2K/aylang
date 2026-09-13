@@ -47,6 +47,11 @@ struct Evaluator {
 
   Value evalIndex(int index, ObjEnv *env);
 
+  Value evalAssign(int index, ObjEnv *env);
+
+  Value evalIndexAssign(const Expression &target, const Value &value,
+                        ObjEnv *env);
+
   Value evalArrayIndex(const Value &array, const Value &indexValue);
 
   Value evalHashMapIndex(const Value &hashMap, const Value &keyValue);

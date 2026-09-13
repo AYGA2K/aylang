@@ -922,6 +922,137 @@ TEST(Evaluator, EvalWhileLaterConditionErrorIsReturned) {
   EXPECT_EQ(text(value), "identifier not found: nope");
 }
 
+TEST(Evaluator, EvalAssignArrayElement) {
+  Value value = eval("let arr = [1, 2, 3]; arr[0] = 9; arr;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Array));
+  ASSERT_EQ(items(value).size(), 3u);
+  EXPECT_DOUBLE_EQ(items(value)[0].num, 9.0);
+  EXPECT_DOUBLE_EQ(items(value)[1].num, 2.0);
+}
+
+TEST(Evaluator, EvalAssignArrayElementReturnsValue) {
+  Value value = eval("let arr = [1]; arr[0] = 9;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 9.0);
+}
+
+TEST(Evaluator, EvalAssignArrayElementWithComputedIndex) {
+  Value value = eval("let arr = [1, 2, 3]; arr[1 + 1] = 9; arr[2];");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 9.0);
+}
+
+TEST(Evaluator, EvalAssignArrayElementInLoop) {
+  Value value = eval("let arr = [0, 0, 0]; let i = 0;"
+                     "while (i < 3) { arr[i] = i * 10; i = i + 1; } arr;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Array));
+  ASSERT_EQ(items(value).size(), 3u);
+  EXPECT_DOUBLE_EQ(items(value)[2].num, 20.0);
+}
+
+TEST(Evaluator, EvalAssignArrayIndexPastEndIsError) {
+  Value value = eval("let arr = [1]; arr[5] = 1;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value), "index is bigger than array size");
+}
+
+TEST(Evaluator, EvalAssignArrayNegativeIndexIsError) {
+  Value value = eval("let arr = [1]; arr[-1] = 1;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value), "index must be greater or equal than zero");
+}
+
+TEST(Evaluator, EvalAssignArrayStringIndexIsError) {
+  Value value = eval("let arr = [1]; arr[\"x\"] = 1;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value), "index must be a number");
+}
+
+TEST(Evaluator, EvalAssignHashExistingKey) {
+  Value value = eval("let h = {\"a\": 1}; h[\"a\"] = 5; h[\"a\"];");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 5.0);
+}
+
+TEST(Evaluator, EvalAssignHashNewKey) {
+  Value value = eval("let h = {\"a\": 1}; h[\"b\"] = 2; len(h);");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 2.0);
+}
+
+TEST(Evaluator, EvalAssignHashKeepsKeysUnique) {
+  Value value = eval("let h = {\"a\": 1}; h[\"a\"] = 2; len(h);");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 1.0);
+}
+
+TEST(Evaluator, EvalAssignHashNumberKey) {
+  Value value = eval("let h = {}; h[2] = \"two\"; h[2];");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::String));
+  EXPECT_EQ(text(value), "two");
+}
+
+TEST(Evaluator, EvalAssignHashBadKeyIsError) {
+  Value value = eval("let h = {}; h[[1]] = 1;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value),
+            "hash map key must be a number, string, bool or null: Array");
+}
+
+TEST(Evaluator, EvalAssignIndexOnNonCollectionIsError) {
+  Value value = eval("let n = 5; n[0] = 1;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value), "variable is not an array or a hashmap");
+}
+
+TEST(Evaluator, EvalAssignIndexOnUnboundNameIsError) {
+  Value value = eval("nope[0] = 1;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value), "identifier not found: nope");
+}
+
+TEST(Evaluator, EvalAssignIndexValueErrorPropagates) {
+  Value value = eval("let arr = [1]; arr[0] = nope;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value), "identifier not found: nope");
+}
+
+TEST(Evaluator, EvalAssignIndexExpressionErrorPropagates) {
+  Value value = eval("let arr = [1]; arr[nope] = 1;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value), "identifier not found: nope");
+}
+
+TEST(Evaluator, EvalAssignArrayElementSharesObject) {
+  Value value = eval("let arr = [1]; let alias = arr; alias[0] = 7; arr[0];");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 7.0);
+}
+
+TEST(Evaluator, EvalAssignArrayElementFromFunction) {
+  Value value = eval("let arr = [1]; let f = fn() { arr[0] = 3; }; f(); arr[0];");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 3.0);
+}
+
 TEST(Evaluator, EvalAssignRebindsVariable) {
   Value value = eval("let x = 1; x = 2; x;");
 

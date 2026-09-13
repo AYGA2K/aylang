@@ -86,16 +86,8 @@ Value Evaluator::evalExpression(int index, ObjEnv *env) {
     }
     return evalInfixExpression(expr.binaryOperator, left, right);
   }
-  case ExpressionKind::ASSIGN: {
-    Value value = evalExpression(expr.rightExprIndex, env);
-    if (isError(value)) {
-      return value;
-    }
-    if (!envAssign(env, expr.literal, value)) {
-      return makeError("identifier not found: " + expr.literal);
-    }
-    return value;
-  }
+  case ExpressionKind::ASSIGN:
+    return evalAssign(index, env);
   case ExpressionKind::LITERAL_STRING:
     return makeString(expr.literal);
 
@@ -525,8 +517,8 @@ Value Evaluator::evalCallExpression(int functionExprIndex,
     return function;
   }
   if (!isFunction(function)) {
-    std::string what = isNamed ? callee.literal + " is not a function: "
-                               : "not a function: ";
+    std::string what =
+        isNamed ? callee.literal + " is not a function: " : "not a function: ";
     return makeError(what + valueKindToString(kindOf(function)));
   }
   std::vector<Value> args = evalExpressions(argExprIndexes, env);
@@ -568,6 +560,60 @@ Value Evaluator::evalHashMap(int index, ObjEnv *env) {
     hashMapSet(asHashMap(result), key, value);
   }
   return result;
+}
+
+Value Evaluator::evalAssign(int index, ObjEnv *env) {
+  const Expression &expr = parserResult.expressions[index];
+  const Expression &target = parserResult.expressions[expr.leftExprIndex];
+  Value value = evalExpression(expr.rightExprIndex, env);
+  if (isError(value)) {
+    return value;
+  }
+  if (target.kind == ExpressionKind::IDENTIFIER) {
+    if (!envAssign(env, target.literal, value)) {
+      return makeError("identifier not found: " + target.literal);
+    }
+    return value;
+  }
+  Rooted rootValue(value); // survives evaluating the index
+  return evalIndexAssign(target, value, env);
+}
+
+Value Evaluator::evalIndexAssign(const Expression &target, const Value &value,
+                                 ObjEnv *env) {
+  Value indexed = envGet(env, target.literal);
+  if (isError(indexed)) {
+    return indexed;
+  }
+  Rooted rootIndexed(indexed); // survives evaluating the index
+  Value indexValue = evalExpression(target.subExprIndex, env);
+  if (isError(indexValue)) {
+    return indexValue;
+  }
+  if (isArray(indexed)) {
+    std::vector<Value> &items = asArray(indexed)->items;
+    if (!isNumber(indexValue)) {
+      return makeError("index must be a number");
+    }
+    if (indexValue.num < 0) {
+      return makeError("index must be greater or equal than zero");
+    }
+    size_t arrIndex = indexValue.num;
+    // Assigning past the end is an error, the way reading past it is
+    if (arrIndex >= items.size()) {
+      return makeError("index is bigger than array size");
+    }
+    items[arrIndex] = value;
+    return value;
+  }
+  if (isHashMap(indexed)) {
+    if (!isValidHashMapKey(indexValue)) {
+      return hashMapKeyError(indexValue);
+    }
+    hashMapSet(asHashMap(indexed), indexValue, value);
+    return value;
+  }
+  return makeError("variable is not an array or a hashmap");
 }
 
 Value Evaluator::evalIndex(int index, ObjEnv *env) {

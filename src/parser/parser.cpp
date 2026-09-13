@@ -263,14 +263,17 @@ int Parser::parseBinary(int leftExprIndex) {
 }
 
 int Parser::parseAssign(int leftExprIndex) {
-  if (leftExprIndex < 0 || parserResult.expressions[leftExprIndex].kind !=
-                               ExpressionKind::IDENTIFIER) {
+  // A target is a name, or an element of one: "x", "arr[0]", "map[key]"
+  if (leftExprIndex < 0 ||
+      (parserResult.expressions[leftExprIndex].kind !=
+           ExpressionKind::IDENTIFIER &&
+       parserResult.expressions[leftExprIndex].kind != ExpressionKind::INDEX)) {
     errors.push_back("Invalid assignment target");
     return -1;
   }
   Expression expression;
   expression.kind = ExpressionKind::ASSIGN;
-  expression.literal = parserResult.expressions[leftExprIndex].literal;
+  expression.leftExprIndex = leftExprIndex;
   current++; // skip "="
   expression.rightExprIndex = parseExpression(Precedence::LOWEST);
   if (expression.rightExprIndex == -1) {
