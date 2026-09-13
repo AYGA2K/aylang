@@ -1340,6 +1340,107 @@ TEST(Evaluator, EvalHashAddNumberIsError) {
   EXPECT_EQ(text(value), "unknown operator: HashMap + Number");
 }
 
+TEST(Evaluator, EvalArrayLiteralErrorElementPropagates) {
+  Value value = eval("[foo];");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value), "identifier not found: foo");
+}
+
+TEST(Evaluator, EvalArrayLiteralErrorStopsStatement) {
+  std::string output;
+  Value value = evalCapturingOutput("let bad = [foo]; print(\"ran\");", output);
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value), "identifier not found: foo");
+  EXPECT_EQ(output, "");
+}
+
+TEST(Evaluator, EvalHashLiteralErrorValuePropagates) {
+  Value value = eval("{\"k\": foo};");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value), "identifier not found: foo");
+}
+
+TEST(Evaluator, EvalHashLiteralErrorInSecondValuePropagates) {
+  Value value = eval("{\"a\": 1, \"b\": foo};");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value), "identifier not found: foo");
+}
+
+TEST(Evaluator, EvalNestedArrayLiteralErrorPropagates) {
+  Value value = eval("[[1], [foo]];");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value), "identifier not found: foo");
+}
+
+TEST(Evaluator, EvalChainedArrayIndex) {
+  Value value = eval("let rows = [[1, 2], [3, 4]]; rows[1][0];");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 3.0);
+}
+
+TEST(Evaluator, EvalChainedHashIndex) {
+  Value value = eval("let h = {\"a\": {\"b\": 7}}; h[\"a\"][\"b\"];");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 7.0);
+}
+
+TEST(Evaluator, EvalIndexOnArrayLiteral) {
+  Value value = eval("[1, 2, 3][1];");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 2.0);
+}
+
+TEST(Evaluator, EvalIndexOnCallResult) {
+  Value value = eval("let mk = fn() { return [[5]]; }; mk()[0][0];");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 5.0);
+}
+
+TEST(Evaluator, EvalCallOnIndexedFunctionThenIndex) {
+  Value value = eval("let fns = [fn() { return [1, 2]; }]; fns[0]()[1];");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 2.0);
+}
+
+TEST(Evaluator, EvalChainedIndexAssign) {
+  Value value = eval("let rows = [[1, 2], [3, 4]]; rows[0][1] = 9; rows[0][1];");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 9.0);
+}
+
+TEST(Evaluator, EvalChainedHashIndexAssign) {
+  Value value =
+      eval("let h = {\"a\": {\"b\": 1}}; h[\"a\"][\"b\"] = 8; h[\"a\"][\"b\"];");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 8.0);
+}
+
+TEST(Evaluator, EvalChainedIndexMissingOuterIsError) {
+  Value value = eval("let rows = [[1]]; rows[9][0];");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value), "index is bigger than array size");
+}
+
+TEST(Evaluator, EvalIndexOnNumberLiteralIsError) {
+  Value value = eval("5[1];");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
+  EXPECT_EQ(text(value), "variable is not an array or a hashmap");
+}
+
 TEST(Evaluator, EvalHashIndexStringKey) {
   Value value = eval("let h = {\"a\": 1}; h[\"a\"];");
 
@@ -2183,6 +2284,38 @@ TEST(Evaluator, EvalBuiltinLenUnboundArgumentIsError) {
   EXPECT_EQ(output, "");
 }
 
+TEST(Evaluator, EvalBuiltinPushOnNestedArray) {
+  Value value = eval("let rows = [[1], [2]]; push(rows[0], 9); rows[0];");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Array));
+  ASSERT_EQ(items(value).size(), 2u);
+  EXPECT_DOUBLE_EQ(items(value)[1].num, 9.0);
+}
+
+TEST(Evaluator, EvalBuiltinPushOnReturnedArray) {
+  Value value = eval("let arr = [1]; let get = fn() { return arr; };"
+                     "push(get(), 2); arr;");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Array));
+  ASSERT_EQ(items(value).size(), 2u);
+  EXPECT_DOUBLE_EQ(items(value)[1].num, 2.0);
+}
+
+TEST(Evaluator, EvalBuiltinSetOnNestedHash) {
+  Value value = eval("let maps = [{\"a\": 1}]; set(maps[0], \"b\", 2);"
+                     "maps[0][\"b\"];");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 2.0);
+}
+
+TEST(Evaluator, EvalBuiltinHasOnNestedHash) {
+  Value value = eval("let maps = [{\"a\": 1}]; has(maps[0], \"a\");");
+
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Bool));
+  EXPECT_TRUE(value.boolean);
+}
+
 TEST(Evaluator, EvalBuiltinPushReturnsPushedValue) {
   Value value = eval("let arr = [1]; push(arr, 2);");
 
@@ -2234,12 +2367,12 @@ TEST(Evaluator, EvalBuiltinPushTooManyArgsIsError) {
   EXPECT_EQ(output, "");
 }
 
-TEST(Evaluator, EvalBuiltinPushFirstArgumentNotIdentifierIsError) {
+TEST(Evaluator, EvalBuiltinPushOnArrayLiteral) {
   std::string output;
   Value value = evalCapturingOutput("push([1, 2], 3);", output);
 
-  EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
-  EXPECT_EQ(text(value), "first argument to push must be an identifier");
+  EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 3.0);
   EXPECT_EQ(output, "");
 }
 
@@ -2385,12 +2518,12 @@ TEST(Evaluator, EvalBuiltinSetTooManyArgsIsError) {
   EXPECT_EQ(output, "");
 }
 
-TEST(Evaluator, EvalBuiltinSetFirstArgumentNotIdentifierIsError) {
+TEST(Evaluator, EvalBuiltinSetOnHashLiteral) {
   std::string output;
   Value value = evalCapturingOutput("set({}, \"a\", 1);", output);
 
-  EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
-  EXPECT_EQ(text(value), "first argument to set must be an identifier");
+  EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Number));
+  EXPECT_DOUBLE_EQ(value.num, 1.0);
   EXPECT_EQ(output, "");
 }
 
@@ -2567,12 +2700,12 @@ TEST(Evaluator, EvalBuiltinHasTooManyArgsIsError) {
   EXPECT_EQ(output, "");
 }
 
-TEST(Evaluator, EvalBuiltinHasFirstArgumentNotIdentifierIsError) {
+TEST(Evaluator, EvalBuiltinHasOnHashLiteral) {
   std::string output;
   Value value = evalCapturingOutput("has({\"a\": 1}, \"a\");", output);
 
-  EXPECT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Error));
-  EXPECT_EQ(text(value), "first argument to has must be an identifier");
+  ASSERT_EQ(static_cast<int>(kindOf(value)), static_cast<int>(ValueKind::Bool));
+  EXPECT_TRUE(value.boolean);
   EXPECT_EQ(output, "");
 }
 

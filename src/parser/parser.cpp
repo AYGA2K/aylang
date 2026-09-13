@@ -480,14 +480,10 @@ int Parser::parseIndexExpression(int leftExprIndex) {
     errors.push_back("Expected an expression before the index brackets");
     return -1;
   }
-  Expression literalExpr = parserResult.expressions[leftExprIndex];
-  if (literalExpr.kind != ExpressionKind::IDENTIFIER) {
-    errors.push_back("Expected an identifier before the index brackets");
-    return -1;
-  }
   Expression expression;
   expression.kind = ExpressionKind::INDEX;
-  expression.literal = literalExpr.literal;
+  // Anything can be indexed, so "a[0][1]" is the index of an index
+  expression.leftExprIndex = leftExprIndex;
   current++; // move past "["
   int indexExpr = parseExpression(Precedence::LOWEST);
   if (indexExpr == -1) {

@@ -345,16 +345,6 @@ static Value hashMapKeyError(const Value &key) {
                    valueKindToString(kindOf(key)));
 }
 
-Value Evaluator::lookupVariableArg(const std::string &funcName,
-                                   int argExprIndex, ObjEnv *env) {
-  const Expression &expr = parserResult.expressions[argExprIndex];
-  if (expr.kind != ExpressionKind::IDENTIFIER) {
-    return makeError("first argument to " + funcName +
-                     " must be an identifier");
-  }
-  return envGet(env, expr.literal);
-}
-
 Value Evaluator::evalPrint(const std::vector<int> &argExprIndexes,
                            ObjEnv *env) {
   std::vector<Value> args = evalExpressions(argExprIndexes, env);
@@ -402,7 +392,9 @@ Value Evaluator::evalPush(const std::vector<int> &argExprIndexes, ObjEnv *env) {
   if (argExprIndexes.size() != 2) {
     return wrongArgCountError(argExprIndexes.size(), 2);
   }
-  Value array = lookupVariableArg("push", argExprIndexes[0], env);
+  // The Value is a copy, but it points at the same array, so appending
+  // here is visible through every name holding it
+  Value array = evalExpression(argExprIndexes[0], env);
   Rooted rootArray(array); // survives evaluating the pushed value
   if (isError(array)) {
     return array;
@@ -424,7 +416,7 @@ Value Evaluator::evalSet(const std::vector<int> &argExprIndexes, ObjEnv *env) {
   if (argExprIndexes.size() != 3) {
     return wrongArgCountError(argExprIndexes.size(), 3);
   }
-  Value hashMap = lookupVariableArg("set", argExprIndexes[0], env);
+  Value hashMap = evalExpression(argExprIndexes[0], env);
   Rooted rootHashMap(hashMap); // survives evaluating the key and the value
   if (isError(hashMap)) {
     return hashMap;
@@ -454,7 +446,7 @@ Value Evaluator::evalHas(const std::vector<int> &argExprIndexes, ObjEnv *env) {
   if (argExprIndexes.size() != 2) {
     return wrongArgCountError(argExprIndexes.size(), 2);
   }
-  Value hashMap = lookupVariableArg("has", argExprIndexes[0], env);
+  Value hashMap = evalExpression(argExprIndexes[0], env);
   Rooted rootHashMap(hashMap); // survives evaluating the key
   if (isError(hashMap)) {
     return hashMap;
@@ -535,7 +527,11 @@ Value Evaluator::evalArray(int index, ObjEnv *env) {
   Rooted rootResult(result);    // now it is reachable from a root
   ObjArray *array = asArray(result);
   for (int indx : expr.expressionsIndexes) {
-    array->items.push_back(evalExpression(indx, env));
+    Value item = evalExpression(indx, env);
+    if (isError(item)) {
+      return item;
+    }
+    array->items.push_back(item);
   }
   return result;
 }
@@ -556,6 +552,9 @@ Value Evaluator::evalHashMap(int index, ObjEnv *env) {
       return hashMapKeyError(key);
     }
     Value value = evalExpression(pairs[indx + 1], env);
+    if (isError(value)) {
+      return value;
+    }
     // A repeated key in the literal keeps its last value
     hashMapSet(asHashMap(result), key, value);
   }
@@ -581,7 +580,7 @@ Value Evaluator::evalAssign(int index, ObjEnv *env) {
 
 Value Evaluator::evalIndexAssign(const Expression &target, const Value &value,
                                  ObjEnv *env) {
-  Value indexed = envGet(env, target.literal);
+  Value indexed = evalExpression(target.leftExprIndex, env);
   if (isError(indexed)) {
     return indexed;
   }
@@ -618,10 +617,12 @@ Value Evaluator::evalIndexAssign(const Expression &target, const Value &value,
 
 Value Evaluator::evalIndex(int index, ObjEnv *env) {
   Expression indexexpr = parserResult.expressions[index];
-  Value indexed = envGet(env, indexexpr.literal);
+  Value indexed = evalExpression(indexexpr.leftExprIndex, env);
   if (isError(indexed)) {
     return indexed;
   }
+  // The indexed value can be a temporary, reachable from nowhere else
+  Rooted rootIndexed(indexed); // survives evaluating the index
   Value indexValue = evalExpression(indexexpr.subExprIndex, env);
   if (isError(indexValue)) {
     return indexValue;

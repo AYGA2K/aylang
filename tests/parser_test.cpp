@@ -536,7 +536,7 @@ TEST(Parser, ParseAssignToArrayElement) {
   Expression target = at(parser, root.leftExprIndex);
   EXPECT_EQ(static_cast<int>(target.kind),
             static_cast<int>(ExpressionKind::INDEX));
-  EXPECT_EQ(target.literal, "arr");
+  EXPECT_EQ(at(parser, target.leftExprIndex).literal, "arr");
   EXPECT_DOUBLE_EQ(at(parser, target.subExprIndex).numValue, 0.0);
   EXPECT_DOUBLE_EQ(at(parser, root.rightExprIndex).numValue, 5.0);
   EXPECT_TRUE(parser.errors.empty());
@@ -554,7 +554,7 @@ TEST(Parser, ParseAssignToHashKey) {
   Expression target = at(parser, root.leftExprIndex);
   EXPECT_EQ(static_cast<int>(target.kind),
             static_cast<int>(ExpressionKind::INDEX));
-  EXPECT_EQ(target.literal, "map");
+  EXPECT_EQ(at(parser, target.leftExprIndex).literal, "map");
   EXPECT_EQ(at(parser, target.subExprIndex).literal, "k");
   EXPECT_TRUE(parser.errors.empty());
 }
@@ -1584,20 +1584,46 @@ TEST(Parser, ParseIndexExpression) {
       at(parser, parser.parserResult.statements[0].expressionIndex);
   EXPECT_EQ(static_cast<int>(expression.kind),
             static_cast<int>(ExpressionKind::INDEX));
-  EXPECT_EQ(expression.literal, "arr");
+  EXPECT_EQ(at(parser, expression.leftExprIndex).literal, "arr");
   EXPECT_DOUBLE_EQ(at(parser, expression.subExprIndex).numValue, 1.0);
   EXPECT_TRUE(parser.errors.empty());
 }
 
-TEST(Parser, ParseIndexExpressionOnNonIdentifierIsError) {
-  std::vector<Token> tokens = tokenize("5[1];");
+TEST(Parser, ParseChainedIndexExpression) {
+  std::vector<Token> tokens = tokenize("arr[0][1];");
   Parser parser{tokens};
 
   parser.parseExpressionStatement();
 
-  ASSERT_FALSE(parser.errors.empty());
-  EXPECT_EQ(parser.errors[0],
-            "Expected an identifier before the index brackets");
+  ASSERT_FALSE(parser.parserResult.statements.empty());
+  Expression outer =
+      at(parser, parser.parserResult.statements[0].expressionIndex);
+  EXPECT_EQ(static_cast<int>(outer.kind),
+            static_cast<int>(ExpressionKind::INDEX));
+  EXPECT_DOUBLE_EQ(at(parser, outer.subExprIndex).numValue, 1.0);
+
+  Expression inner = at(parser, outer.leftExprIndex);
+  EXPECT_EQ(static_cast<int>(inner.kind),
+            static_cast<int>(ExpressionKind::INDEX));
+  EXPECT_EQ(at(parser, inner.leftExprIndex).literal, "arr");
+  EXPECT_DOUBLE_EQ(at(parser, inner.subExprIndex).numValue, 0.0);
+  EXPECT_TRUE(parser.errors.empty());
+}
+
+TEST(Parser, ParseIndexExpressionOnCall) {
+  std::vector<Token> tokens = tokenize("f()[0];");
+  Parser parser{tokens};
+
+  parser.parseExpressionStatement();
+
+  ASSERT_FALSE(parser.parserResult.statements.empty());
+  Expression expression =
+      at(parser, parser.parserResult.statements[0].expressionIndex);
+  EXPECT_EQ(static_cast<int>(expression.kind),
+            static_cast<int>(ExpressionKind::INDEX));
+  EXPECT_EQ(static_cast<int>(at(parser, expression.leftExprIndex).kind),
+            static_cast<int>(ExpressionKind::CALL));
+  EXPECT_TRUE(parser.errors.empty());
 }
 
 TEST(Parser, ParseIndexExpressionWithBinaryIndex) {
@@ -1611,7 +1637,7 @@ TEST(Parser, ParseIndexExpressionWithBinaryIndex) {
       at(parser, parser.parserResult.statements[0].expressionIndex);
   EXPECT_EQ(static_cast<int>(expression.kind),
             static_cast<int>(ExpressionKind::INDEX));
-  EXPECT_EQ(expression.literal, "arr");
+  EXPECT_EQ(at(parser, expression.leftExprIndex).literal, "arr");
   Expression indexExpr = at(parser, expression.subExprIndex);
   EXPECT_EQ(static_cast<int>(indexExpr.kind),
             static_cast<int>(ExpressionKind::BINARY));
